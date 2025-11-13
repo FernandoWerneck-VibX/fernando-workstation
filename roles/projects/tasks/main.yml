@@ -1,0 +1,17 @@
+---
+- name: Criar pasta de projetos
+  file:
+    path: "{{ projects_dir }}"
+    state: directory
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+
+- name: Clonar repositórios
+  become_user: "{{ dev_user }}"
+  git:
+    repo: "{{ item.url }}"
+    dest: "{{ projects_dir }}/{{ item.name }}"
+    update: no
+  loop: "{{ projects_repos }}"
+  args:
+    creates: "{{ projects_dir }}/{{ item.name }}/.git"

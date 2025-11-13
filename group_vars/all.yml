@@ -1,0 +1,16 @@
+dev_user: fernando
+dev_home: "/home/{{ dev_user }}"
+git_user_name: "Fernando Werneck"
+git_user_email: "fernando@vibx.com.br"
+python_version: "3.12.2"
+node_version: "lts/*"
+java_version: "24-open"
+chezmoi_repo: "https://github.com/SEU_REPO_DOTFILES"
+flutter_version: "3.19.6"
+apt_cache_valid_time: 3600
+projects_dir: "{{ dev_home }}/projects"
+projects_repos:
+  - name: exemplo-api
+    url: "git@github.com:usuario/exemplo-api.git"
+  - name: exemplo-front
+    url: "git@github.com:usuario/exemplo-front.git"

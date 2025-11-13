@@ -1,0 +1,11 @@
+---
+- name: Setup Pop!_OS para desenvolvimento completo
+  hosts: local
+  become: yes
+  roles:
+    - common
+    - shell
+    - dev_tools
+    - desktop_apps
+    - projects
+    - gdrive

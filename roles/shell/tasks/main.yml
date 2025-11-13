@@ -1,0 +1,78 @@
+---
+- name: Configurar Git
+  become_user: "{{ dev_user }}"
+  block:
+    - command: git config --global user.name "{{ git_user_name }}"
+    - command: git config --global user.email "{{ git_user_email }}"
+    - command: git config --global init.defaultBranch main
+
+- name: Baixar git-completion
+  get_url:
+    url: https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
+    dest: /etc/bash_completion.d/git-completion.bash
+
+- name: Instalar bash-git-prompt
+  become_user: "{{ dev_user }}"
+  git:
+    repo: https://github.com/magicmonty/bash-git-prompt.git
+    dest: "{{ dev_home }}/.bash-git-prompt"
+    depth: 1
+
+- name: Instalar Chezmoi
+  become_user: "{{ dev_user }}"
+  shell: sh -c "$(curl -fsLS get.chezmoi.io)"
+
+- name: Aplicar dotfiles
+  become_user: "{{ dev_user }}"
+  shell: "{{ dev_home }}/.local/bin/chezmoi init {{ chezmoi_repo }} --apply"
+
+- name: Instalar bash-autosuggestions
+  become_user: "{{ dev_user }}"
+  git:
+    repo: https://github.com/mimipepsi/bash-autosuggestions.git
+    dest: "{{ dev_home }}/.bash-autosuggestions"
+
+- name: Ativar bash-autosuggestions
+  become_user: "{{ dev_user }}"
+  lineinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    line: 'source "$HOME/.bash-autosuggestions/bash-autosuggestions.sh"'
+
+- name: Instalar bash-syntax-highlighting
+  become_user: "{{ dev_user }}"
+  git:
+    repo: https://github.com/bhilburn/bash-syntax-highlighting.git
+    dest: "{{ dev_home }}/.bash-syntax-highlighting"
+
+- name: Ativar bash-syntax-highlighting
+  become_user: "{{ dev_user }}"
+  lineinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    line: 'source "$HOME/.bash-syntax-highlighting/bash-syntax-highlighting.sh"'
+
+- name: FZF History Search
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    block: |
+      __fzf_history() {
+        local selected=$(history | fzf)
+        READLINE_LINE="${selected#* }"
+        READLINE_POINT=${#READLINE_LINE}
+      }
+      bind '"\C-r": "__fzf_history"'
+
+- name: Instalar bash-you-should-use
+  become_user: "{{ dev_user }}"
+  git:
+    repo: https://github.com/mniip/bash-you-should-use.git
+    dest: "{{ dev_home }}/.bash-you-should-use"
+
+- name: Ativar bash-you-should-use
+  become_user: "{{ dev_user }}"
+  lineinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    line: 'source "$HOME/.bash-you-should-use/you-should-use.sh"'

@@ -1,0 +1,16 @@
+---
+- name: Instalar rclone
+  apt: {name: rclone, state: present}
+
+- name: Criar diretório GoogleDrive
+  file:
+    path: "{{ dev_home }}/GoogleDrive"
+    state: directory
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+
+- name: Subpastas
+  file:
+    path: "{{ dev_home }}/GoogleDrive/{{ item }}"
+    state: directory
+  loop: [Downloads, docs]

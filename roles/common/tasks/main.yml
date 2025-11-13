@@ -1,0 +1,70 @@
+---
+- name: Atualizar sistema
+  apt:
+    update_cache: yes
+    cache_valid_time: "{{ apt_cache_valid_time }}"
+    upgrade: dist
+
+- name: Remover apps desnecessários
+  apt:
+    name:
+      - firefox
+      - geary
+      - "libreoffice*"
+      - rhythmbox
+      - remmina
+      - totem
+      - gnome-maps
+      - gnome-weather
+      - gnome-clocks
+      - gnome-contacts
+      - gnome-characters
+      - gnome-mahjongg
+      - gnome-mines
+      - gnome-sudoku
+    purge: yes
+    autoremove: yes
+    state: absent
+
+- name: Instalar pacotes essenciais
+  apt:
+    name:
+      - build-essential
+      - curl
+      - wget
+      - git
+      - unzip
+      - zip
+      - tar
+      - htop
+      - fzf
+      - ripgrep
+      - gpg
+      - jq
+      - bash-completion
+      - file
+      - software-properties-common
+
+- name: Otimizar sysctl
+  copy:
+    dest: /etc/sysctl.d/99-performance.conf
+    content: |
+      vm.swappiness=10
+      vm.dirty_ratio=3
+      vm.dirty_background_ratio=3
+      fs.inotify.max_user_watches=524288
+      fs.inotify.max_user_instances=512
+
+- command: sysctl --system
+
+- name: Desativar animações GNOME
+  become_user: "{{ dev_user }}"
+  shell: gsettings set org.gnome.desktop.interface enable-animations false
+
+- name: Configurar ZRAM
+  copy:
+    dest: /etc/systemd/zram-generator.conf
+    content: |
+      [zram0]
+      zram-size = ram / 2
+      compression-algorithm = zstd
