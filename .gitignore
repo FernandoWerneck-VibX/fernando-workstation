@@ -1,3 +1,48 @@
 *.log
 __pycache__/
 *.retry
+
+---
+
+```gitignore
+# Ansible
+*.retry
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System
+.DS_Store
+Thumbs.db
+
+# Virtualenvs
+.env
+.venv
+env/
+venv/
+
+# IDEs
+.vscode/
+.idea/
+
+# Build
+dist/
+build/
+target/
+
+# Chezmoi
+*.tmpl~
+
+# rclone cache
+rclone*
+.cache/
