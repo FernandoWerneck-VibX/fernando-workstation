@@ -1,0 +1,6 @@
+---
+kubectl_version: "latest"
+helm_version: "latest"
+k9s_version: "latest"
+kind_version: "latest"
+docker_apt_release: "{{ ansible_distribution_release }}"

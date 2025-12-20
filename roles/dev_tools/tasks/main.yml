@@ -2,6 +2,8 @@
 - name: Instalar SDKMAN
   become_user: "{{ dev_user }}"
   shell: curl -s "https://get.sdkman.io" | bash
+  args:
+    creates: "{{ dev_home }}/.sdkman/bin/sdkman-init.sh"
 
 - name: Instalar Java/Maven/Gradle
   become_user: "{{ dev_user }}"
@@ -15,6 +17,8 @@
 - name: Instalar NVM
   become_user: "{{ dev_user }}"
   shell: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+  args:
+    creates: "{{ dev_home }}/.nvm/nvm.sh"
 
 - name: Instalar Node/Yarn/PNPM/Vue/Vite
   become_user: "{{ dev_user }}"
@@ -44,6 +48,8 @@
 - name: Instalar Pyenv
   become_user: "{{ dev_user }}"
   shell: curl https://pyenv.run | bash
+  args:
+    creates: "{{ dev_home }}/.pyenv/bin/pyenv"
 
 - name: Instalar Python via Pyenv
   become_user: "{{ dev_user }}"
@@ -54,3 +60,109 @@
     pyenv install -s {{ python_version }}
     pyenv global {{ python_version }}
   args: {executable: /bin/bash}
+
+- name: Baixar releases do Flutter
+  uri:
+    url: https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json
+    return_content: yes
+  register: flutter_releases
+  failed_when: false
+  when: flutter_version == "latest"
+
+- name: Validar consulta do Flutter
+  fail:
+    msg: "Falha ao consultar releases do Flutter. Verifique rede/proxy ou defina flutter_version fixo."
+  when: flutter_version == "latest" and (flutter_releases.status is not defined or flutter_releases.status != 200)
+
+- name: Validar flutter_channel
+  fail:
+    msg: "flutter_channel invalido: {{ flutter_channel }}."
+  when: flutter_version == "latest" and flutter_releases.json.current_release[flutter_channel] is not defined
+
+- name: Definir release do Flutter
+  set_fact:
+    flutter_release: >-
+      {{ (flutter_releases.json.releases
+          | selectattr('hash', 'equalto', flutter_releases.json.current_release[flutter_channel])
+          | list | first) }}
+  when: flutter_version == "latest"
+
+- name: Definir versao do Flutter
+  set_fact:
+    flutter_resolved_version: "{{ flutter_release.version }}"
+    flutter_resolved_sha256: "{{ flutter_release.sha256 | default('', true) }}"
+  when: flutter_version == "latest"
+
+- name: Definir versao fixa do Flutter
+  set_fact:
+    flutter_resolved_version: "{{ flutter_version }}"
+    flutter_resolved_sha256: ""
+  when: flutter_version != "latest"
+
+- name: Verificar versao instalada do Flutter
+  command: "{{ flutter_install_dir }}/bin/flutter --version"
+  register: flutter_installed
+  failed_when: false
+  changed_when: false
+
+- name: Extrair versao instalada do Flutter
+  set_fact:
+    flutter_installed_version: >-
+      {{ (flutter_installed.stdout_lines[0].split(' ')[1])
+         if flutter_installed.rc == 0 else '' }}
+
+- name: Garantir diretorio de instalacao do Flutter
+  file:
+    path: "{{ flutter_install_dir | dirname }}"
+    state: directory
+
+- name: Criar diretoria temporaria do Flutter
+  tempfile:
+    state: directory
+    suffix: flutter
+  register: flutter_tmp
+  when: flutter_installed_version != flutter_resolved_version
+
+- name: Remover Flutter anterior
+  file:
+    path: "{{ flutter_install_dir }}"
+    state: absent
+  when: flutter_installed_version != "" and flutter_installed_version != flutter_resolved_version
+
+- name: Baixar Flutter
+  get_url:
+    url: "https://storage.googleapis.com/flutter_infra_release/releases/{{ flutter_channel }}/linux/flutter_linux_{{ flutter_resolved_version }}-{{ flutter_channel }}.tar.xz"
+    dest: "{{ flutter_tmp.path }}/flutter.tar.xz"
+    checksum: "{{ 'sha256:' ~ flutter_resolved_sha256 if flutter_resolved_sha256 else omit }}"
+  when: flutter_installed_version != flutter_resolved_version
+
+- name: Extrair Flutter
+  unarchive:
+    src: "{{ flutter_tmp.path }}/flutter.tar.xz"
+    dest: "{{ flutter_install_dir | dirname }}"
+    remote_src: yes
+  when: flutter_installed_version != flutter_resolved_version
+
+- name: Limpar temporarios do Flutter
+  file:
+    path: "{{ flutter_tmp.path }}"
+    state: absent
+  when: flutter_installed_version != flutter_resolved_version
+
+- name: Exportar PATH do Flutter
+  copy:
+    dest: /etc/profile.d/flutter.sh
+    content: |
+      export PATH="{{ flutter_install_dir }}/bin:$PATH"
+    mode: "0644"
+
+- name: Validar Flutter
+  command: "{{ flutter_install_dir }}/bin/flutter --version"
+  register: flutter_check
+  changed_when: false
+  failed_when: false
+
+- name: Falhar se Flutter nao validar
+  fail:
+    msg: "Falha ao validar Flutter. Verifique acesso ao storage do Flutter, rede/proxy ou fixe flutter_version."
+  when: flutter_check.rc != 0

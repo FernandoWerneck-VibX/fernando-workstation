@@ -3,6 +3,8 @@
 Este repositório contém um conjunto completo de **playbooks Ansible**, **roles modulares** e **scripts de automação**
 para configurar rapidamente uma estação de trabalho Pop!_OS totalmente preparada para desenvolvimento moderno.
 
+Compatível com **Pop!_OS 24.04 LTS** (base Ubuntu 24.04 / COSMIC). Ajustes GNOME são aplicados apenas se `gsettings` estiver disponível.
+
 A proposta principal é simples:
 
 > **Ligar uma máquina nova → rodar o bootstrap → sair com tudo configurado, idêntico em todas as máquinas.**
@@ -32,25 +34,29 @@ A proposta principal é simples:
 - **Shell Produtivo (Bash)**
   - fzf
   - ripgrep
+  - bat
   - bash-autosuggestions
   - bash-syntax-highlighting
   - bash-you-should-use
   - bash-git-prompt
   - Git com autocompletion
+  - Zsh não é configurado por padrão
 
 - **Aplicativos Essenciais**
   - Chrome
+  - Visual Studio Code
   - Sublime Text
   - Obsidian
   - Postman
   - Discord
   - Spotify
-  - YouTube Music
+  - Audiotube (YouTube Music)
   - Celluloid (vídeo)
   - gThumb (imagens)
+  - Flatpak/Flathub como padrão (fallback .deb/apt/tarball)
 
 - **Google Drive Integrado**
-  - rclone + systemd mount
+  - rclone + systemd service
   - bind automático das pastas:
     - `~/Downloads`
     - `~/docs`
@@ -111,6 +117,8 @@ Isso ativará:
 - `/home/SEU_USUARIO/GoogleDrive`  
 - Bind para `~/Downloads` e `~/docs`  
 
+Obs: o serviço só inicia se `~/.config/rclone/rclone.conf` existir.
+
 ---
 
 # 🛠 Personalização
@@ -133,6 +141,13 @@ git_user_email: "fernando@vibx.com.br"
 java_version: "24-open"
 node_version: "lts/*"
 python_version: "3.12.2"
+flutter_version: "latest"
+flutter_channel: "stable"
+kubectl_version: "latest"
+helm_version: "latest"
+k9s_version: "latest"
+kind_version: "latest"
+docker_apt_release: "noble"
 
 chezmoi_repo: "https://github.com/SEU_REPO_DOTFILES"
 
@@ -141,6 +156,12 @@ projects_repos:
     url: git@github.com:usuario/exemplo-api.git
   - name: exemplo-front
     url: git@github.com:usuario/exemplo-front.git
+
+flatpak_apps:
+  - id: "md.obsidian.Obsidian"
+  - id: "com.getpostman.Postman"
+  - id: "com.spotify.Client"
+  - id: "org.kde.audiotube"
 ```
 
 Você pode customizar:
@@ -151,6 +172,20 @@ Você pode customizar:
 - Nome do usuário
 - Estrutura de pastas
 - Apps a instalar nas roles
+- Fallbacks por app (apt, deb ou tarball)
+
+Opcional: para Postman via `.deb`, configure `postman_deb_url` e `postman_deb_package_name` em `group_vars/all.yml`.
+
+Exemplo de fallback por app:
+
+```yaml
+flatpak_apps:
+  - id: "com.getpostman.Postman"
+    fallback:
+      tarball: "https://dl.pstmn.io/download/latest/linux64"
+      install_dir: "/opt"
+      validate_path: "/opt/Postman/Postman"
+```
 
 ---
 
@@ -165,7 +200,7 @@ mount | grep GoogleDrive
 ## 🔹 Reiniciar o serviço do Google Drive
 
 ```bash
-systemctl --user restart rclone-gdrive
+sudo systemctl restart rclone-gdrive
 ```
 
 ## 🔹 Testar Docker
@@ -173,6 +208,8 @@ systemctl --user restart rclone-gdrive
 ```bash
 docker run hello-world
 ```
+
+Se der erro de permissao, faça logout/login para aplicar o grupo `docker`.
 
 ## 🔹 Testar se os repositórios foram clonados
 

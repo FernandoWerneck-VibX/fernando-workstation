@@ -13,4 +13,113 @@
   file:
     path: "{{ dev_home }}/GoogleDrive/{{ item }}"
     state: directory
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
   loop: [Downloads, docs]
+
+- name: Garantir pastas locais
+  file:
+    path: "{{ dev_home }}/{{ item }}"
+    state: directory
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+  loop: [Downloads, docs]
+
+- name: Instalar service do rclone
+  copy:
+    dest: /etc/systemd/system/rclone-gdrive.service
+    content: |
+      [Unit]
+      Description=Rclone mount for Google Drive
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User={{ dev_user }}
+      Group={{ dev_user }}
+      ExecStart=/usr/bin/rclone mount gdrive: {{ dev_home }}/GoogleDrive --vfs-cache-mode writes --allow-other --dir-cache-time 72h --poll-interval 15s
+      ExecStop=/bin/fusermount -u {{ dev_home }}/GoogleDrive
+      Restart=on-failure
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Instalar bind mount para Downloads
+  copy:
+    dest: "/etc/systemd/system/home-{{ dev_user }}-Downloads.mount"
+    content: |
+      [Unit]
+      Description=Bind GoogleDrive Downloads
+      After=rclone-gdrive.service
+      Requires=rclone-gdrive.service
+
+      [Mount]
+      What={{ dev_home }}/GoogleDrive/Downloads
+      Where={{ dev_home }}/Downloads
+      Type=none
+      Options=bind
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Instalar bind mount para docs
+  copy:
+    dest: "/etc/systemd/system/home-{{ dev_user }}-docs.mount"
+    content: |
+      [Unit]
+      Description=Bind GoogleDrive docs
+      After=rclone-gdrive.service
+      Requires=rclone-gdrive.service
+
+      [Mount]
+      What={{ dev_home }}/GoogleDrive/docs
+      Where={{ dev_home }}/docs
+      Type=none
+      Options=bind
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Recarregar systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Verificar configuracao do rclone
+  stat:
+    path: "{{ dev_home }}/.config/rclone/rclone.conf"
+  register: rclone_conf
+
+- name: Avisar se rclone nao estiver configurado
+  debug:
+    msg: "rclone.conf nao encontrado. Execute 'rclone config' e re-rodar o playbook para ativar os mounts."
+  when: not rclone_conf.stat.exists
+
+- name: Habilitar rclone
+  systemd:
+    name: rclone-gdrive.service
+    enabled: yes
+
+- name: Habilitar binds
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+  loop:
+    - "home-{{ dev_user }}-Downloads.mount"
+    - "home-{{ dev_user }}-docs.mount"
+
+- name: Iniciar rclone se configurado
+  systemd:
+    name: rclone-gdrive.service
+    state: started
+  when: rclone_conf.stat.exists
+
+- name: Iniciar binds se configurado
+  systemd:
+    name: "{{ item }}"
+    state: started
+  loop:
+    - "home-{{ dev_user }}-Downloads.mount"
+    - "home-{{ dev_user }}-docs.mount"
+  when: rclone_conf.stat.exists

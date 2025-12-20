@@ -1,6 +1,6 @@
 # 🧰 Scripts Utilitários — Fernando Workstation
 
-A pasta `/scripts` contém ferramentas essenciais para:
+A pasta `/utils-scripts` contém ferramentas essenciais para:
 
 - Manutenção do sistema
 - Produtividade em desenvolvimento
@@ -13,7 +13,7 @@ A pasta `/scripts` contém ferramentas essenciais para:
 Os scripts são organizados por categorias:
 
 ```
-scripts/
+utils-scripts/
 ├── system
 ├── git
 ├── docker
@@ -29,19 +29,19 @@ scripts/
 Dê permissão de execução:
 
 ```bash
-chmod +x scripts/**/*.sh
+chmod +x utils-scripts/**/*.sh
 ```
 
 Execute diretamente:
 
 ```bash
-./scripts/system/update-system.sh
+./utils-scripts/system/update-system.sh
 ```
 
 Ou adicione ao PATH:
 
 ```bash
-export PATH="$HOME/scripts:$PATH"
+export PATH="$HOME/utils-scripts/system:$HOME/utils-scripts/git:$HOME/utils-scripts/docker:$HOME/utils-scripts/k8s:$HOME/utils-scripts/gdrive:$HOME/utils-scripts/dev:$PATH"
 ```
 
 ---
@@ -55,7 +55,7 @@ Scripts para manutenção geral.
 Remove caches e arquivos temporários.
 
 ### update-system.sh
-Atualiza apt, Flatpak, Snap, SDKMAN, NVM e Pyenv.
+Atualiza apt, Flatpak, SDKMAN, NVM e Pyenv.
 
 ### boost.sh
 Ativa modo performance.
@@ -64,7 +64,7 @@ Ativa modo performance.
 Restaura modo normal.
 
 ### check-env.sh
-Mostra diagnóstico rápido de versões instaladas.
+Mostra diagnóstico rápido (Java, Node, Python, Bat, Docker, K8s, Helm, K9s, Kind, Flutter).
 
 ---
 
@@ -130,10 +130,10 @@ Sobe API e Frontend em paralelo.
 # Sugestão de Alias
 
 ```bash
-alias update="~/scripts/system/update-system.sh"
-alias clean="~/scripts/system/cleanup.sh"
-alias dr="~/scripts/docker/docker-reset.sh"
-alias kc="~/scripts/k8s/k8s-ctx.sh"
+alias update="~/utils-scripts/system/update-system.sh"
+alias clean="~/utils-scripts/system/cleanup.sh"
+alias dr="~/utils-scripts/docker/docker-reset.sh"
+alias kc="~/utils-scripts/k8s/k8s-ctx.sh"
 ```
 
 ---

@@ -1,18 +1,161 @@
 ---
-- name: Instalar Celluloid
-  apt: {name: celluloid, state: present}
+- name: Instalar Flatpak
+  apt:
+    name: flatpak
+    state: present
 
-- name: Instalar gThumb
-  apt: {name: gthumb, state: present}
+- name: Adicionar Flathub (system)
+  command: >
+    flatpak remote-add --if-not-exists --system
+    {{ flatpak_remote_name }} {{ flatpak_remote_url }}
+  changed_when: false
 
-- name: Instalar Chrome
-  apt: {deb: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb}
+- name: Garantir keyrings do apt
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
 
-- name: Instalar Sublime Text
-  apt_repository: {repo: "deb https://download.sublimetext.com/ apt/stable/"}
+- name: Instalar apps desktop via Flatpak com fallback
+  block:
+    - name: Verificar app Flatpak instalada
+      command: flatpak info --system {{ item.id }}
+      register: flatpak_info
+      failed_when: false
+      changed_when: false
 
-- name: Sublime
-  apt: {name: sublime-text}
+    - name: Instalar app Flatpak
+      command: flatpak install -y --system {{ flatpak_remote_name }} {{ item.id }}
+      when: flatpak_info.rc != 0
+  rescue:
+    - name: Avisar sobre falha do Flatpak
+      debug:
+        msg: "Falha ao instalar {{ item.id }} via Flatpak. Verifique rede/Flathub; tentando fallback."
+    - name: Fallback para apt/deb
+      when: item.fallback is defined
+      block:
+        - name: Baixar chave do repo apt
+          when: item.fallback.apt_key_url is defined
+          get_url:
+            url: "{{ item.fallback.apt_key_url }}"
+            dest: "{{ item.fallback.apt_key_dest | default('/etc/apt/keyrings/' ~ (item.id | replace('.', '-')) ~ '.gpg') }}"
+            mode: "0644"
 
-- name: Discord
-  apt: {deb: "https://discord.com/api/download?platform=linux&format=deb"}
+        - name: Adicionar repo apt
+          when: item.fallback.apt_repo is defined
+          apt_repository:
+            repo: "{{ item.fallback.apt_repo }}"
+            filename: "fallback-{{ item.id | replace('.', '-') }}"
+            update_cache: yes
+
+        - name: Instalar pacote apt
+          when: item.fallback.apt is defined or item.fallback.apt_package is defined
+          apt:
+            name: "{{ item.fallback.apt | default(item.fallback.apt_package) }}"
+            state: present
+
+        - name: Instalar pacote deb
+          when: item.fallback.deb is defined and item.fallback.deb | length > 0
+          apt:
+            deb: "{{ item.fallback.deb }}"
+
+        - name: Validar dados do tarball
+          when: item.fallback.tarball is defined and (item.fallback.validate_path is not defined or item.fallback.install_dir is not defined)
+          fail:
+            msg: "fallback.tarball exige 'validate_path' e 'install_dir' para {{ item.id }}."
+
+        - name: Verificar instalacao via tarball
+          when: item.fallback.tarball is defined
+          stat:
+            path: "{{ item.fallback.validate_path }}"
+          register: tarball_stat
+
+        - name: Garantir diretorio de instalacao do tarball
+          when: item.fallback.tarball is defined and not tarball_stat.stat.exists
+          file:
+            path: "{{ item.fallback.install_dir }}"
+            state: directory
+            mode: "0755"
+
+        - name: Criar diretoria temporaria para tarball
+          when: item.fallback.tarball is defined and not tarball_stat.stat.exists
+          tempfile:
+            state: directory
+            suffix: app
+          register: tarball_tmp
+
+        - name: Baixar tarball
+          when: item.fallback.tarball is defined and not tarball_stat.stat.exists
+          get_url:
+            url: "{{ item.fallback.tarball }}"
+            dest: "{{ tarball_tmp.path }}/app.tar.gz"
+            mode: "0644"
+
+        - name: Extrair tarball
+          when: item.fallback.tarball is defined and not tarball_stat.stat.exists
+          unarchive:
+            src: "{{ tarball_tmp.path }}/app.tar.gz"
+            dest: "{{ item.fallback.install_dir }}"
+            remote_src: yes
+
+        - name: Garantir link do binario
+          when: item.fallback.bin_path is defined and item.fallback.bin_target is defined
+          file:
+            src: "{{ item.fallback.bin_target }}"
+            dest: "{{ item.fallback.bin_path }}"
+            state: link
+
+        - name: Criar desktop entry
+          when: item.fallback.desktop_entry is defined and item.fallback.desktop_exec is defined
+          copy:
+            dest: "{{ item.fallback.desktop_entry }}"
+            mode: "0644"
+            content: |
+              [Desktop Entry]
+              Name={{ item.fallback.desktop_name | default(item.id) }}
+              Exec={{ item.fallback.desktop_exec }}
+              Icon={{ item.fallback.desktop_icon | default('') }}
+              Type=Application
+              Categories=Development;
+              Terminal=false
+
+        - name: Limpar temporarios do tarball
+          when: item.fallback.tarball is defined and tarball_tmp is defined
+          file:
+            path: "{{ tarball_tmp.path }}"
+            state: absent
+      rescue:
+        - fail:
+            msg: "Falha ao instalar fallback de {{ item.id }}. Verifique rede/proxy, chaves GPG e repositorios apt/deb."
+    - name: Falhar sem fallback
+      when: item.fallback is not defined
+      fail:
+        msg: "Falha ao instalar {{ item.id }} via Flatpak e nenhum fallback foi definido. Verifique sua conexao com a Internet/Flathub."
+  loop: "{{ flatpak_apps }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: Validar apps desktop instalados
+  shell: |
+    if flatpak info --system "{{ item.id }}" >/dev/null 2>&1; then exit 0; fi
+    if [ -n "{{ (item.fallback.apt | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.apt | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
+    if [ -n "{{ (item.fallback.apt_package | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.apt_package | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
+    if [ -n "{{ (item.fallback.package_name | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.package_name | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
+    if [ -n "{{ (item.fallback.validate_path | default('')) if item.fallback is defined else '' }}" ] && [ -e "{{ (item.fallback.validate_path | default('')) if item.fallback is defined else '' }}" ]; then exit 0; fi
+    exit 1
+  args:
+    executable: /bin/bash
+  register: app_validation
+  changed_when: false
+  failed_when: false
+  loop: "{{ flatpak_apps }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: Falhar se app desktop nao validado
+  fail:
+    msg: "Falha ao validar {{ item.item.id }}. Verifique rede/Flathub, repositorios apt/deb ou fallback definido."
+  when: item.rc != 0
+  loop: "{{ app_validation.results }}"
+  loop_control:
+    label: "{{ item.item.id }}"

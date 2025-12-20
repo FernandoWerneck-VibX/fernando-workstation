@@ -33,17 +33,28 @@
       - curl
       - wget
       - git
+      - ca-certificates
+      - apt-transport-https
       - unzip
       - zip
       - tar
       - htop
       - fzf
       - ripgrep
+      - bat
       - gpg
       - jq
       - bash-completion
       - file
       - software-properties-common
+      - fuse3
+
+- name: Permitir FUSE allow_other
+  lineinfile:
+    path: /etc/fuse.conf
+    line: "user_allow_other"
+    state: present
+    create: yes
 
 - name: Otimizar sysctl
   copy:
@@ -57,9 +68,18 @@
 
 - command: sysctl --system
 
+- name: Verificar gsettings
+  command: which gsettings
+  register: gsettings_check
+  changed_when: false
+  failed_when: false
+
 - name: Desativar animações GNOME
   become_user: "{{ dev_user }}"
   shell: gsettings set org.gnome.desktop.interface enable-animations false
+  when: gsettings_check.rc == 0
+  changed_when: false
+  failed_when: false
 
 - name: Configurar ZRAM
   copy:
@@ -68,3 +88,20 @@
       [zram0]
       zram-size = ram / 2
       compression-algorithm = zstd
+
+- name: Verificar batcat
+  stat:
+    path: /usr/bin/batcat
+  register: batcat_stat
+
+- name: Verificar bat
+  stat:
+    path: /usr/bin/bat
+  register: bat_stat
+
+- name: Criar symlink bat -> batcat
+  file:
+    src: /usr/bin/batcat
+    dest: /usr/local/bin/bat
+    state: link
+  when: batcat_stat.stat.exists and not bat_stat.stat.exists

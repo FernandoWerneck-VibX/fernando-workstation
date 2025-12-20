@@ -1,0 +1,412 @@
+---
+- name: Definir arquitetura para downloads
+  set_fact:
+    devops_arch: >-
+      {{ 'amd64' if ansible_architecture == 'x86_64'
+         else 'arm64' if ansible_architecture in ['aarch64', 'arm64']
+         else ansible_architecture }}
+
+- name: Definir release do repo Docker
+  set_fact:
+    docker_repo_release: "{{ docker_apt_release | default(ansible_distribution_release) }}"
+
+- name: Remover pacotes Docker antigos
+  apt:
+    name:
+      - docker.io
+      - docker-doc
+      - docker-compose
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+
+- name: Garantir keyrings do apt
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Baixar chave GPG do Docker
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Adicionar repo Docker
+  apt_repository:
+    repo: >-
+      deb [arch={{ devops_arch }} signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/ubuntu {{ docker_repo_release }} stable
+    filename: docker
+    update_cache: yes
+
+- name: Instalar Docker e Compose
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Habilitar Docker
+  systemd:
+    name: docker
+    enabled: yes
+    state: started
+
+- name: Garantir grupo docker
+  group:
+    name: docker
+    state: present
+
+- name: Adicionar usuario ao grupo docker
+  user:
+    name: "{{ dev_user }}"
+    groups: docker
+    append: yes
+
+- name: Descobrir versao do kubectl
+  command: curl -L -s https://dl.k8s.io/release/stable.txt
+  register: kubectl_latest
+  failed_when: false
+  changed_when: false
+  when: kubectl_version == "latest"
+
+- name: Validar consulta do kubectl
+  fail:
+    msg: "Falha ao consultar versao do kubectl. Verifique rede/proxy ou defina kubectl_version fixo."
+  when: kubectl_version == "latest" and (kubectl_latest.rc != 0 or kubectl_latest.stdout | trim == "")
+
+- name: Definir versao do kubectl
+  set_fact:
+    kubectl_resolved_version: "{{ kubectl_latest.stdout | trim }}"
+  when: kubectl_version == "latest"
+
+- name: Definir versao fixa do kubectl
+  set_fact:
+    kubectl_resolved_version: "{{ kubectl_version }}"
+  when: kubectl_version != "latest"
+
+- name: Normalizar versao do kubectl
+  set_fact:
+    kubectl_resolved_version: >-
+      {{ 'v' ~ kubectl_resolved_version
+         if kubectl_resolved_version is defined and not kubectl_resolved_version.startswith('v')
+         else kubectl_resolved_version }}
+
+- name: Verificar versao instalada do kubectl
+  command: kubectl version --client --short
+  register: kubectl_installed
+  failed_when: false
+  changed_when: false
+
+- name: Extrair versao instalada do kubectl
+  set_fact:
+    kubectl_installed_version: "{{ (kubectl_installed.stdout | regex_search('v[0-9.]+')) | default('', true) }}"
+
+- name: Baixar checksum do kubectl
+  uri:
+    url: "https://dl.k8s.io/release/{{ kubectl_resolved_version }}/bin/linux/{{ devops_arch }}/kubectl.sha256"
+    return_content: yes
+  register: kubectl_checksum
+  when: kubectl_installed_version != kubectl_resolved_version
+
+- name: Instalar kubectl
+  get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_resolved_version }}/bin/linux/{{ devops_arch }}/kubectl"
+    dest: /usr/local/bin/kubectl
+    mode: "0755"
+    checksum: "sha256:{{ kubectl_checksum.content | trim }}"
+  when: kubectl_installed_version != kubectl_resolved_version
+
+- name: Descobrir versao do helm
+  uri:
+    url: https://api.github.com/repos/helm/helm/releases/latest
+    return_content: yes
+    headers:
+      User-Agent: ansible
+  register: helm_latest
+  failed_when: false
+  when: helm_version == "latest"
+
+- name: Validar consulta do helm
+  fail:
+    msg: "Falha ao consultar release do Helm no GitHub. Verifique rede/proxy ou defina helm_version fixo."
+  when: helm_version == "latest" and (helm_latest.status is not defined or helm_latest.status != 200)
+
+- name: Definir versao do helm
+  set_fact:
+    helm_resolved_version: "{{ helm_latest.json.tag_name }}"
+  when: helm_version == "latest"
+
+- name: Definir versao fixa do helm
+  set_fact:
+    helm_resolved_version: "{{ helm_version }}"
+  when: helm_version != "latest"
+
+- name: Normalizar versao do helm
+  set_fact:
+    helm_resolved_version: >-
+      {{ 'v' ~ helm_resolved_version
+         if helm_resolved_version is defined and not helm_resolved_version.startswith('v')
+         else helm_resolved_version }}
+
+- name: Verificar versao instalada do helm
+  command: helm version --short
+  register: helm_installed
+  failed_when: false
+  changed_when: false
+
+- name: Extrair versao instalada do helm
+  set_fact:
+    helm_installed_version: "{{ (helm_installed.stdout | regex_search('v[0-9.]+')) | default('', true) }}"
+
+- name: Criar diretoria temporaria do helm
+  tempfile:
+    state: directory
+    suffix: helm
+  register: helm_tmp
+  when: helm_installed_version != helm_resolved_version
+
+- name: Baixar checksum do helm
+  uri:
+    url: "https://get.helm.sh/helm-{{ helm_resolved_version }}-linux-{{ devops_arch }}.tar.gz.sha256sum"
+    return_content: yes
+  register: helm_checksum
+  when: helm_installed_version != helm_resolved_version
+
+- name: Baixar tarball do helm
+  get_url:
+    url: "https://get.helm.sh/helm-{{ helm_resolved_version }}-linux-{{ devops_arch }}.tar.gz"
+    dest: "{{ helm_tmp.path }}/helm.tar.gz"
+    checksum: "sha256:{{ helm_checksum.content.split()[0] }}"
+  when: helm_installed_version != helm_resolved_version
+
+- name: Extrair helm
+  unarchive:
+    src: "{{ helm_tmp.path }}/helm.tar.gz"
+    dest: "{{ helm_tmp.path }}"
+    remote_src: yes
+  when: helm_installed_version != helm_resolved_version
+
+- name: Instalar helm
+  copy:
+    src: "{{ helm_tmp.path }}/linux-{{ devops_arch }}/helm"
+    dest: /usr/local/bin/helm
+    mode: "0755"
+    remote_src: yes
+  when: helm_installed_version != helm_resolved_version
+
+- name: Limpar temporarios do helm
+  file:
+    path: "{{ helm_tmp.path }}"
+    state: absent
+  when: helm_installed_version != helm_resolved_version
+
+- name: Descobrir versao do k9s
+  uri:
+    url: https://api.github.com/repos/derailed/k9s/releases/latest
+    return_content: yes
+    headers:
+      User-Agent: ansible
+  register: k9s_latest
+  failed_when: false
+  when: k9s_version == "latest"
+
+- name: Validar consulta do k9s
+  fail:
+    msg: "Falha ao consultar release do k9s no GitHub. Verifique rede/proxy ou defina k9s_version fixo."
+  when: k9s_version == "latest" and (k9s_latest.status is not defined or k9s_latest.status != 200)
+
+- name: Definir versao do k9s
+  set_fact:
+    k9s_resolved_version: "{{ k9s_latest.json.tag_name }}"
+  when: k9s_version == "latest"
+
+- name: Definir versao fixa do k9s
+  set_fact:
+    k9s_resolved_version: "{{ k9s_version }}"
+  when: k9s_version != "latest"
+
+- name: Normalizar versao do k9s
+  set_fact:
+    k9s_resolved_version: >-
+      {{ 'v' ~ k9s_resolved_version
+         if k9s_resolved_version is defined and not k9s_resolved_version.startswith('v')
+         else k9s_resolved_version }}
+
+- name: Verificar versao instalada do k9s
+  command: k9s version
+  register: k9s_installed
+  failed_when: false
+  changed_when: false
+
+- name: Extrair versao instalada do k9s
+  set_fact:
+    k9s_installed_version: "{{ (k9s_installed.stdout | regex_search('v[0-9.]+')) | default('', true) }}"
+
+- name: Criar diretoria temporaria do k9s
+  tempfile:
+    state: directory
+    suffix: k9s
+  register: k9s_tmp
+  when: k9s_installed_version != k9s_resolved_version
+
+- name: Baixar checksums do k9s
+  uri:
+    url: "https://github.com/derailed/k9s/releases/download/{{ k9s_resolved_version }}/checksums.txt"
+    return_content: yes
+  register: k9s_checksums
+  when: k9s_installed_version != k9s_resolved_version
+
+- name: Definir checksum do k9s
+  set_fact:
+    k9s_filename: "k9s_Linux_{{ devops_arch }}.tar.gz"
+    k9s_checksum: >-
+      {{ (k9s_checksums.content.splitlines()
+          | select('search', 'k9s_Linux_' ~ devops_arch ~ '.tar.gz')
+          | list | first).split()[0] }}
+  when: k9s_installed_version != k9s_resolved_version
+
+- name: Baixar tarball do k9s
+  get_url:
+    url: "https://github.com/derailed/k9s/releases/download/{{ k9s_resolved_version }}/{{ k9s_filename }}"
+    dest: "{{ k9s_tmp.path }}/k9s.tar.gz"
+    checksum: "sha256:{{ k9s_checksum }}"
+  when: k9s_installed_version != k9s_resolved_version
+
+- name: Extrair k9s
+  unarchive:
+    src: "{{ k9s_tmp.path }}/k9s.tar.gz"
+    dest: "{{ k9s_tmp.path }}"
+    remote_src: yes
+  when: k9s_installed_version != k9s_resolved_version
+
+- name: Instalar k9s
+  copy:
+    src: "{{ k9s_tmp.path }}/k9s"
+    dest: /usr/local/bin/k9s
+    mode: "0755"
+    remote_src: yes
+  when: k9s_installed_version != k9s_resolved_version
+
+- name: Limpar temporarios do k9s
+  file:
+    path: "{{ k9s_tmp.path }}"
+    state: absent
+  when: k9s_installed_version != k9s_resolved_version
+
+- name: Descobrir versao do kind
+  uri:
+    url: https://api.github.com/repos/kubernetes-sigs/kind/releases/latest
+    return_content: yes
+    headers:
+      User-Agent: ansible
+  register: kind_latest
+  failed_when: false
+  when: kind_version == "latest"
+
+- name: Validar consulta do kind
+  fail:
+    msg: "Falha ao consultar release do kind no GitHub. Verifique rede/proxy ou defina kind_version fixo."
+  when: kind_version == "latest" and (kind_latest.status is not defined or kind_latest.status != 200)
+
+- name: Definir versao do kind
+  set_fact:
+    kind_resolved_version: "{{ kind_latest.json.tag_name }}"
+  when: kind_version == "latest"
+
+- name: Definir versao fixa do kind
+  set_fact:
+    kind_resolved_version: "{{ kind_version }}"
+  when: kind_version != "latest"
+
+- name: Normalizar versao do kind
+  set_fact:
+    kind_resolved_version: >-
+      {{ 'v' ~ kind_resolved_version
+         if kind_resolved_version is defined and not kind_resolved_version.startswith('v')
+         else kind_resolved_version }}
+
+- name: Verificar versao instalada do kind
+  command: kind version
+  register: kind_installed
+  failed_when: false
+  changed_when: false
+
+- name: Extrair versao instalada do kind
+  set_fact:
+    kind_installed_version: "{{ (kind_installed.stdout | regex_search('v[0-9.]+')) | default('', true) }}"
+
+- name: Baixar checksum do kind
+  uri:
+    url: "https://github.com/kubernetes-sigs/kind/releases/download/{{ kind_resolved_version }}/kind-linux-{{ devops_arch }}.sha256sum"
+    return_content: yes
+  register: kind_checksum
+  when: kind_installed_version != kind_resolved_version
+
+- name: Instalar kind
+  get_url:
+    url: "https://github.com/kubernetes-sigs/kind/releases/download/{{ kind_resolved_version }}/kind-linux-{{ devops_arch }}"
+    dest: /usr/local/bin/kind
+    mode: "0755"
+    checksum: "sha256:{{ kind_checksum.content.split()[0] }}"
+  when: kind_installed_version != kind_resolved_version
+
+- name: Validar Docker
+  command: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
+
+- name: Falhar se Docker nao validar
+  fail:
+    msg: "Falha ao validar Docker. Verifique acesso ao repo do Docker, rede/proxy ou servico."
+  when: docker_check.rc != 0
+
+- name: Validar kubectl
+  command: kubectl version --client --short
+  register: kubectl_check
+  changed_when: false
+  failed_when: false
+
+- name: Falhar se kubectl nao validar
+  fail:
+    msg: "Falha ao validar kubectl. Verifique acesso a dl.k8s.io, rede/proxy ou fixe kubectl_version."
+  when: kubectl_check.rc != 0
+
+- name: Validar Helm
+  command: helm version --short
+  register: helm_check
+  changed_when: false
+  failed_when: false
+
+- name: Falhar se Helm nao validar
+  fail:
+    msg: "Falha ao validar Helm. Verifique acesso a get.helm.sh, rede/proxy ou fixe helm_version."
+  when: helm_check.rc != 0
+
+- name: Validar k9s
+  command: k9s version
+  register: k9s_check
+  changed_when: false
+  failed_when: false
+
+- name: Falhar se k9s nao validar
+  fail:
+    msg: "Falha ao validar k9s. Verifique acesso ao GitHub, rede/proxy ou fixe k9s_version."
+  when: k9s_check.rc != 0
+
+- name: Validar kind
+  command: kind version
+  register: kind_check
+  changed_when: false
+  failed_when: false
+
+- name: Falhar se kind nao validar
+  fail:
+    msg: "Falha ao validar kind. Verifique acesso ao GitHub, rede/proxy ou fixe kind_version."
+  when: kind_check.rc != 0

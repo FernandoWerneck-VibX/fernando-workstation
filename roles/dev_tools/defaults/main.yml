@@ -1,0 +1,7 @@
+---
+python_version: "3.12.2"
+node_version: "lts/*"
+java_version: "24-open"
+flutter_version: "latest"
+flutter_channel: "stable"
+flutter_install_dir: "/opt/flutter"
