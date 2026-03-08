@@ -8,7 +8,21 @@
 
 - name: Definir release do repo Docker
   set_fact:
-    docker_repo_release: "{{ docker_apt_release | default(ansible_distribution_release) }}"
+    docker_repo_release: >-
+      {{
+        docker_apt_release
+        if (docker_apt_release is defined and docker_apt_release | trim | length > 0)
+        else (
+          docker_mint_ubuntu_release_map.get(ansible_distribution_major_version, '')
+          if ansible_distribution == 'Linux Mint'
+          else ansible_distribution_release
+        )
+      }}
+
+- name: Validar release do repo Docker
+  fail:
+    msg: "Nao foi possivel definir docker_repo_release. Defina docker_apt_release em group_vars/all.yml."
+  when: docker_repo_release | trim == ""
 
 - name: Remover pacotes Docker antigos
   apt:
@@ -98,14 +112,14 @@
          else kubectl_resolved_version }}
 
 - name: Verificar versao instalada do kubectl
-  command: kubectl version --client --short
+  command: kubectl version --client -o yaml
   register: kubectl_installed
   failed_when: false
   changed_when: false
 
 - name: Extrair versao instalada do kubectl
   set_fact:
-    kubectl_installed_version: "{{ (kubectl_installed.stdout | regex_search('v[0-9.]+')) | default('', true) }}"
+    kubectl_installed_version: "{{ (kubectl_installed.stdout | regex_search('gitVersion:\\s*(v[0-9.]+)', '\\1') | default([''], true)) | first }}"
 
 - name: Baixar checksum do kubectl
   uri:
@@ -368,7 +382,7 @@
   when: docker_check.rc != 0
 
 - name: Validar kubectl
-  command: kubectl version --client --short
+  command: kubectl version --client -o yaml
   register: kubectl_check
   changed_when: false
   failed_when: false

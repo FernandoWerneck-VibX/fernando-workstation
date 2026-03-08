@@ -55,5 +55,3 @@ flatpak_apps:
       apt_repo: "deb [signed-by=/etc/apt/keyrings/spotify.gpg] http://repository.spotify.com stable non-free"
       apt_package: "spotify-client"
   - id: "org.kde.audiotube"
-    fallback:
-      apt: "audiotube"

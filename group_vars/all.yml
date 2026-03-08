@@ -12,7 +12,9 @@ kind_version: "latest"
 flutter_version: "latest"
 flutter_channel: "stable"
 flutter_install_dir: "/opt/flutter"
-docker_apt_release: "noble"
+# Opcional: sobrescreva o release Ubuntu usado no repo Docker.
+# Exemplo para Mint 22.x: docker_apt_release: "noble"
+# docker_apt_release: ""
 flatpak_remote_name: "flathub"
 flatpak_remote_url: "https://flathub.org/repo/flathub.flatpakrepo"
 postman_deb_url: ""
@@ -69,8 +71,6 @@ flatpak_apps:
       apt_repo: "deb [signed-by=/etc/apt/keyrings/spotify.gpg] http://repository.spotify.com stable non-free"
       apt_package: "spotify-client"
   - id: "org.kde.audiotube"
-    fallback:
-      apt: "audiotube"
 chezmoi_repo: "https://github.com/SEU_REPO_DOTFILES"
 apt_cache_valid_time: 3600
 projects_dir: "{{ dev_home }}/projects"

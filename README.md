@@ -1,9 +1,10 @@
-# 🧰 Fernando Workstation — Provisionamento Profissional para Pop!_OS com Ansible
+# 🧰 Fernando Workstation — Provisionamento Profissional para Linux Mint (Cinnamon) com Ansible
 
 Este repositório contém um conjunto completo de **playbooks Ansible**, **roles modulares** e **scripts de automação**
-para configurar rapidamente uma estação de trabalho Pop!_OS totalmente preparada para desenvolvimento moderno.
+para configurar rapidamente uma estação de trabalho Linux Mint totalmente preparada para desenvolvimento moderno.
 
-Compatível com **Pop!_OS 24.04 LTS** (base Ubuntu 24.04 / COSMIC). Ajustes GNOME são aplicados apenas se `gsettings` estiver disponível.
+Compatível com **Linux Mint 22.3 (Cinnamon)**, baseado em Ubuntu 24.04 LTS.
+O projeto mantém compatibilidade com a família Mint 22.x e aplica ajustes de desktop via `gsettings` (Cinnamon/GNOME) quando disponível.
 
 A proposta principal é simples:
 
@@ -16,7 +17,8 @@ A proposta principal é simples:
 - **Sistema Operacional Otimizado**
   - Atualizações automatizadas
   - Remoção de apps desnecessários
-  - Sysctl e ZRAM otimizados
+  - Sysctl e ZRAM otimizados (`vm.swappiness=5`)
+  - `fstrim.timer` e `irqbalance` habilitados
 
 - **Ambiente de Desenvolvimento Completo**
   - Java (SDKMAN, Maven, Gradle)
@@ -147,7 +149,6 @@ kubectl_version: "latest"
 helm_version: "latest"
 k9s_version: "latest"
 kind_version: "latest"
-docker_apt_release: "noble"
 
 chezmoi_repo: "https://github.com/SEU_REPO_DOTFILES"
 
@@ -162,6 +163,12 @@ flatpak_apps:
   - id: "com.getpostman.Postman"
   - id: "com.spotify.Client"
   - id: "org.kde.audiotube"
+```
+
+Opcional: caso queira forçar outro release Ubuntu para o repositório Docker, defina:
+
+```yaml
+docker_apt_release: "noble"
 ```
 
 Você pode customizar:

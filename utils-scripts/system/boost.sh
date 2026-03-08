@@ -1,3 +1,11 @@
 #!/bin/bash
-echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-sudo systemctl stop thermald
+set -euo pipefail
+
+for governor_file in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor; do
+  [ -e "$governor_file" ] || continue
+  echo performance | sudo tee "$governor_file" >/dev/null
+done
+
+if systemctl list-unit-files thermald.service >/dev/null 2>&1; then
+  sudo systemctl stop thermald || true
+fi

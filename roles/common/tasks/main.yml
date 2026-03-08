@@ -13,6 +13,10 @@
       - "libreoffice*"
       - rhythmbox
       - remmina
+      - thunderbird
+      - hexchat
+      - warpinator
+      - hypnotix
       - totem
       - gnome-maps
       - gnome-weather
@@ -48,6 +52,8 @@
       - file
       - software-properties-common
       - fuse3
+      - irqbalance
+      - systemd-zram-generator
 
 - name: Permitir FUSE allow_other
   lineinfile:
@@ -60,13 +66,28 @@
   copy:
     dest: /etc/sysctl.d/99-performance.conf
     content: |
-      vm.swappiness=10
-      vm.dirty_ratio=3
-      vm.dirty_background_ratio=3
+      vm.swappiness=5
+      vm.vfs_cache_pressure=50
+      vm.dirty_background_ratio=2
+      vm.dirty_ratio=10
       fs.inotify.max_user_watches=524288
       fs.inotify.max_user_instances=512
 
-- command: sysctl --system
+- name: Aplicar parametros do sysctl
+  command: sysctl --system
+  changed_when: false
+
+- name: Habilitar TRIM periodico
+  systemd:
+    name: fstrim.timer
+    enabled: yes
+    state: started
+
+- name: Habilitar irqbalance
+  systemd:
+    name: irqbalance
+    enabled: yes
+    state: started
 
 - name: Verificar gsettings
   command: which gsettings
@@ -74,9 +95,14 @@
   changed_when: false
   failed_when: false
 
-- name: Desativar animações GNOME
+- name: Reduzir animacoes no Cinnamon e GNOME
   become_user: "{{ dev_user }}"
-  shell: gsettings set org.gnome.desktop.interface enable-animations false
+  shell: gsettings set {{ item.schema }} {{ item.key }} {{ item.value }}
+  loop:
+    - { schema: "org.cinnamon.desktop.interface", key: "enable-animations", value: "false" }
+    - { schema: "org.gnome.desktop.interface", key: "enable-animations", value: "false" }
+  loop_control:
+    label: "{{ item.schema }} {{ item.key }}"
   when: gsettings_check.rc == 0
   changed_when: false
   failed_when: false
@@ -88,6 +114,16 @@
       [zram0]
       zram-size = ram / 2
       compression-algorithm = zstd
+
+- name: Recarregar systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Tentar ativar ZRAM imediatamente
+  systemd:
+    name: systemd-zram-setup@zram0.service
+    state: started
+  failed_when: false
 
 - name: Verificar batcat
   stat:
