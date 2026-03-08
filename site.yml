@@ -4,9 +4,11 @@
   become: yes
   roles:
     - common
+    - cinnamon
     - shell
     - dev_tools
     - devops
     - desktop_apps
     - projects
+    - syncthing
     - gdrive

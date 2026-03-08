@@ -57,12 +57,14 @@
   blockinfile:
     path: "{{ dev_home }}/.bashrc"
     block: |
+      {% raw %}
       __fzf_history() {
         local selected=$(history | fzf)
         READLINE_LINE="${selected#* }"
         READLINE_POINT=${#READLINE_LINE}
       }
       bind '"\C-r": "__fzf_history"'
+      {% endraw %}
 
 - name: Instalar bash-you-should-use
   become_user: "{{ dev_user }}"

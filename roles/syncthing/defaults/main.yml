@@ -1,0 +1,4 @@
+---
+syncthing_enable: true
+syncthing_folders:
+  - "{{ dev_home }}/Downloads"

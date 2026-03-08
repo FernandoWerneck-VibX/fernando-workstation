@@ -1,0 +1,28 @@
+---
+- name: Instalar Syncthing
+  apt:
+    name: syncthing
+    state: present
+  when: syncthing_enable | bool
+
+- name: Garantir pastas do Syncthing
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0755"
+  loop: "{{ syncthing_folders }}"
+  when: syncthing_enable | bool
+
+- name: Habilitar Syncthing para o usuario
+  systemd:
+    name: "syncthing@{{ dev_user }}"
+    enabled: yes
+    state: started
+  when: syncthing_enable | bool
+
+- name: Avisar proxima etapa de pareamento
+  debug:
+    msg: "Syncthing ativo. Acesse http://127.0.0.1:8384 para parear dispositivos e configurar IDs das pastas."
+  when: syncthing_enable | bool

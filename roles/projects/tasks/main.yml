@@ -13,5 +13,3 @@
     dest: "{{ projects_dir }}/{{ item.name }}"
     update: no
   loop: "{{ projects_repos }}"
-  args:
-    creates: "{{ projects_dir }}/{{ item.name }}/.git"

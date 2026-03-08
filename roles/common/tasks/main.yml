@@ -53,6 +53,7 @@
       - software-properties-common
       - fuse3
       - irqbalance
+      - tlp
       - systemd-zram-generator
 
 - name: Permitir FUSE allow_other
@@ -88,6 +89,13 @@
     name: irqbalance
     enabled: yes
     state: started
+
+- name: Habilitar TLP
+  systemd:
+    name: tlp
+    enabled: yes
+    state: started
+  failed_when: false
 
 - name: Verificar gsettings
   command: which gsettings

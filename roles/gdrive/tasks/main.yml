@@ -15,7 +15,7 @@
     state: directory
     owner: "{{ dev_user }}"
     group: "{{ dev_user }}"
-  loop: [Downloads, docs]
+  loop: [docs]
 
 - name: Garantir pastas locais
   file:
@@ -23,7 +23,7 @@
     state: directory
     owner: "{{ dev_user }}"
     group: "{{ dev_user }}"
-  loop: [Downloads, docs]
+  loop: [docs]
 
 - name: Instalar service do rclone
   copy:
@@ -42,24 +42,6 @@
       ExecStop=/bin/fusermount -u {{ dev_home }}/GoogleDrive
       Restart=on-failure
       RestartSec=10
-
-      [Install]
-      WantedBy=multi-user.target
-
-- name: Instalar bind mount para Downloads
-  copy:
-    dest: "/etc/systemd/system/home-{{ dev_user }}-Downloads.mount"
-    content: |
-      [Unit]
-      Description=Bind GoogleDrive Downloads
-      After=rclone-gdrive.service
-      Requires=rclone-gdrive.service
-
-      [Mount]
-      What={{ dev_home }}/GoogleDrive/Downloads
-      Where={{ dev_home }}/Downloads
-      Type=none
-      Options=bind
 
       [Install]
       WantedBy=multi-user.target
@@ -86,6 +68,22 @@
   systemd:
     daemon_reload: yes
 
+- name: Desabilitar bind legado de Downloads
+  systemd:
+    name: "home-{{ dev_user }}-Downloads.mount"
+    enabled: no
+    state: stopped
+  failed_when: false
+
+- name: Remover unit legado de Downloads
+  file:
+    path: "/etc/systemd/system/home-{{ dev_user }}-Downloads.mount"
+    state: absent
+
+- name: Recarregar systemd apos limpeza legada
+  systemd:
+    daemon_reload: yes
+
 - name: Verificar configuracao do rclone
   stat:
     path: "{{ dev_home }}/.config/rclone/rclone.conf"
@@ -106,7 +104,6 @@
     name: "{{ item }}"
     enabled: yes
   loop:
-    - "home-{{ dev_user }}-Downloads.mount"
     - "home-{{ dev_user }}-docs.mount"
 
 - name: Iniciar rclone se configurado
@@ -120,6 +117,5 @@
     name: "{{ item }}"
     state: started
   loop:
-    - "home-{{ dev_user }}-Downloads.mount"
     - "home-{{ dev_user }}-docs.mount"
   when: rclone_conf.stat.exists

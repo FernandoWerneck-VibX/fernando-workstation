@@ -19,6 +19,8 @@ A proposta principal é simples:
   - Remoção de apps desnecessários
   - Sysctl e ZRAM otimizados (`vm.swappiness=5`)
   - `fstrim.timer` e `irqbalance` habilitados
+  - `tlp` habilitado
+  - Extensão `gTile` instalada no Cinnamon
 
 - **Ambiente de Desenvolvimento Completo**
   - Java (SDKMAN, Maven, Gradle)
@@ -57,11 +59,14 @@ A proposta principal é simples:
   - gThumb (imagens)
   - Flatpak/Flathub como padrão (fallback .deb/apt/tarball)
 
-- **Google Drive Integrado**
+- **Google Drive Integrado (Documentos)**
   - rclone + systemd service
-  - bind automático das pastas:
-    - `~/Downloads`
-    - `~/docs`
+  - bind automático para `~/docs`
+
+- **Sincronização Entre Máquinas (Syncthing)**
+  - serviço `syncthing@usuario` habilitado
+  - pasta padrão sincronizável: `~/Downloads`
+  - pareamento de dispositivos via UI: `http://127.0.0.1:8384`
 
 - **Gerenciamento de Dotfiles**
   - Chezmoi integrado e aplicado automaticamente
@@ -117,9 +122,27 @@ ansible-playbook -i inventory.ini site.yml --ask-become-pass
 Isso ativará:
 
 - `/home/SEU_USUARIO/GoogleDrive`  
-- Bind para `~/Downloads` e `~/docs`  
+- Bind para `~/docs`  
 
 Obs: o serviço só inicia se `~/.config/rclone/rclone.conf` existir.
+
+---
+
+# 🔄 Primeira Execução com Syncthing
+
+Após rodar o playbook, o serviço do Syncthing ficará ativo:
+
+```bash
+sudo systemctl status syncthing@SEU_USUARIO
+```
+
+Abra a interface web local para parear os dispositivos:
+
+```bash
+xdg-open http://127.0.0.1:8384
+```
+
+Obs: o playbook prepara o serviço e as pastas, mas o pareamento de dispositivos e IDs de pasta é feito uma vez na UI.
 
 ---
 
@@ -149,6 +172,10 @@ kubectl_version: "latest"
 helm_version: "latest"
 k9s_version: "latest"
 kind_version: "latest"
+syncthing_enable: true
+syncthing_folders:
+  - "{{ dev_home }}/Downloads"
+cinnamon_enable_gtile: true
 
 chezmoi_repo: "https://github.com/SEU_REPO_DOTFILES"
 
@@ -208,6 +235,12 @@ mount | grep GoogleDrive
 
 ```bash
 sudo systemctl restart rclone-gdrive
+```
+
+## 🔹 Testar Syncthing
+
+```bash
+sudo systemctl status syncthing@SEU_USUARIO
 ```
 
 ## 🔹 Testar Docker

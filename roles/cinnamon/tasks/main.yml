@@ -1,0 +1,56 @@
+---
+- name: Verificar suporte do gsettings para extensoes do Cinnamon
+  command: gsettings writable org.cinnamon enabled-extensions
+  register: cinnamon_extensions_writable
+  changed_when: false
+  failed_when: false
+  when: cinnamon_enable_gtile | bool
+
+- name: Garantir diretorio de extensoes do Cinnamon
+  file:
+    path: "{{ dev_home }}/.local/share/cinnamon/extensions"
+    state: directory
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0755"
+  when: cinnamon_enable_gtile | bool
+
+- name: Instalar extensao gTile
+  become_user: "{{ dev_user }}"
+  git:
+    repo: "{{ cinnamon_gtile_repo }}"
+    dest: "{{ dev_home }}/.local/share/cinnamon/extensions/{{ cinnamon_gtile_extension_id }}"
+    version: master
+    update: yes
+  when:
+    - cinnamon_enable_gtile | bool
+    - cinnamon_extensions_writable.rc == 0
+    - cinnamon_extensions_writable.stdout | trim == "true"
+
+- name: Habilitar gTile no Cinnamon
+  become_user: "{{ dev_user }}"
+  shell: |
+    set -euo pipefail
+    exts="$(gsettings get org.cinnamon enabled-extensions)"
+
+    if echo "$exts" | grep -q "'{{ cinnamon_gtile_extension_id }}'"; then
+      echo "already-enabled"
+      exit 0
+    fi
+
+    if [ "$exts" = "@as []" ] || [ "$exts" = "[]" ]; then
+      gsettings set org.cinnamon enabled-extensions "['{{ cinnamon_gtile_extension_id }}']"
+    else
+      gsettings set org.cinnamon enabled-extensions "${exts%]}, '{{ cinnamon_gtile_extension_id }}']"
+    fi
+
+    echo "enabled"
+  args:
+    executable: /bin/bash
+  register: gtile_enable_result
+  changed_when: "'enabled' in gtile_enable_result.stdout"
+  failed_when: false
+  when:
+    - cinnamon_enable_gtile | bool
+    - cinnamon_extensions_writable.rc == 0
+    - cinnamon_extensions_writable.stdout | trim == "true"

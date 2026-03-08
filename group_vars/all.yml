@@ -12,6 +12,10 @@ kind_version: "latest"
 flutter_version: "latest"
 flutter_channel: "stable"
 flutter_install_dir: "/opt/flutter"
+syncthing_enable: true
+syncthing_folders:
+  - "{{ dev_home }}/Downloads"
+cinnamon_enable_gtile: true
 # Opcional: sobrescreva o release Ubuntu usado no repo Docker.
 # Exemplo para Mint 22.x: docker_apt_release: "noble"
 # docker_apt_release: ""
