@@ -14,6 +14,17 @@
     sdk install gradle
   args: {executable: /bin/bash}
 
+- name: Ativar SDKMAN no Bash
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - sdkman"
+    block: |
+      if [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
+        source "$HOME/.sdkman/bin/sdkman-init.sh"
+      fi
+
 - name: Instalar NVM
   become_user: "{{ dev_user }}"
   shell: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
@@ -28,6 +39,17 @@
     nvm install {{ node_version }}
     nvm alias default {{ node_version }}
     npm install -g yarn pnpm @vue/cli create-vite
+
+- name: Ativar NVM no Bash
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - nvm"
+    block: |
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 - name: Dependências Pyenv
   apt:
@@ -60,6 +82,19 @@
     pyenv install -s {{ python_version }}
     pyenv global {{ python_version }}
   args: {executable: /bin/bash}
+
+- name: Ativar Pyenv no Bash
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - pyenv"
+    block: |
+      export PYENV_ROOT="$HOME/.pyenv"
+      if [ -d "$PYENV_ROOT/bin" ]; then
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init -)"
+      fi
 
 - name: Baixar releases do Flutter
   uri:

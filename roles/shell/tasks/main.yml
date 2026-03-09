@@ -18,18 +18,6 @@
     dest: "{{ dev_home }}/.bash-git-prompt"
     depth: 1
 
-- name: Ativar bash-git-prompt
-  become_user: "{{ dev_user }}"
-  blockinfile:
-    path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - bash-git-prompt"
-    block: |
-      if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then
-          GIT_PROMPT_ONLY_IN_REPO=1
-          source "$HOME/.bash-git-prompt/gitprompt.sh"
-      fi
-
 - name: Instalar Chezmoi
   become_user: "{{ dev_user }}"
   shell: sh -c "$(curl -fsLS get.chezmoi.io)"
@@ -71,6 +59,18 @@
   debug:
     msg: "Nenhuma fonte do Chezmoi configurada. Defina chezmoi_repo ou crie ./chezmoi para aplicar dotfiles."
   when: chezmoi_apply_mode == "none"
+
+- name: Ativar bash-git-prompt
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - bash-git-prompt"
+    block: |
+      if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then
+          GIT_PROMPT_ONLY_IN_REPO=1
+          source "$HOME/.bash-git-prompt/gitprompt.sh"
+      fi
 
 - name: Instalar bash-autosuggestions
   become_user: "{{ dev_user }}"
