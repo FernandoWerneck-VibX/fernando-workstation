@@ -77,6 +77,9 @@ flatpak_apps:
   - id: "org.ferdium.Ferdium"
     fallback:
       apt: "ferdium"
+  - id: "org.gnome.Cheese"
+    fallback:
+      apt: "cheese"
   - id: "io.github.mfat.sshpilot"
   - id: "org.kde.audiotube"
 chezmoi_repo: "https://github.com/SEU_REPO_DOTFILES"

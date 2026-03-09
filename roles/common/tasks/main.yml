@@ -56,6 +56,18 @@
       - tlp
       - systemd-zram-generator
 
+- name: Remover power-profiles-daemon para evitar conflito com TLP
+  apt:
+    name: power-profiles-daemon
+    state: absent
+
+- name: Garantir servico power-profiles-daemon parado e desabilitado
+  systemd:
+    name: power-profiles-daemon
+    state: stopped
+    enabled: no
+  failed_when: false
+
 - name: Permitir FUSE allow_other
   lineinfile:
     path: /etc/fuse.conf

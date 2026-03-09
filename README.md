@@ -20,6 +20,7 @@ A proposta principal é simples:
   - Sysctl e ZRAM otimizados (`vm.swappiness=5`)
   - `fstrim.timer` e `irqbalance` habilitados
   - `tlp` habilitado
+  - `power-profiles-daemon` removido para evitar conflito com TLP
   - Extensão `gTile` instalada no Cinnamon
 
 - **Ambiente de Desenvolvimento Completo**
@@ -54,6 +55,7 @@ A proposta principal é simples:
   - Postman
   - Discord
   - Ferdium (multi-conta para mensageria)
+  - Cheese (webcam/foto/vídeo rápido)
   - SSH Pilot (GUI para múltiplas conexões SSH)
   - Spotify
   - Audiotube (YouTube Music)
@@ -191,6 +193,7 @@ flatpak_apps:
   - id: "md.obsidian.Obsidian"
   - id: "com.getpostman.Postman"
   - id: "org.ferdium.Ferdium"
+  - id: "org.gnome.Cheese"
   - id: "io.github.mfat.sshpilot"
   - id: "com.spotify.Client"
   - id: "org.kde.audiotube"
