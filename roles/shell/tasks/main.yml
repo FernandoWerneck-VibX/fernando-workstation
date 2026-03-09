@@ -18,13 +18,59 @@
     dest: "{{ dev_home }}/.bash-git-prompt"
     depth: 1
 
+- name: Ativar bash-git-prompt
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - bash-git-prompt"
+    block: |
+      if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then
+          GIT_PROMPT_ONLY_IN_REPO=1
+          source "$HOME/.bash-git-prompt/gitprompt.sh"
+      fi
+
 - name: Instalar Chezmoi
   become_user: "{{ dev_user }}"
   shell: sh -c "$(curl -fsLS get.chezmoi.io)"
 
-- name: Aplicar dotfiles
+- name: Verificar fonte local do Chezmoi no projeto
+  stat:
+    path: "{{ playbook_dir }}/chezmoi"
+  register: chezmoi_local_source
+
+- name: Verificar se repo do Chezmoi foi configurado
+  set_fact:
+    chezmoi_repo_configured: >-
+      {{
+        chezmoi_repo is defined
+        and (chezmoi_repo | trim | length > 0)
+        and ('SEU_REPO_DOTFILES' not in chezmoi_repo)
+      }}
+
+- name: Definir modo de aplicacao do Chezmoi
+  set_fact:
+    chezmoi_apply_mode: >-
+      {{
+        'repo'
+        if chezmoi_repo_configured
+        else ('local' if (chezmoi_local_source.stat.isdir | default(false)) else 'none')
+      }}
+
+- name: Aplicar dotfiles via repo
   become_user: "{{ dev_user }}"
   shell: "{{ dev_home }}/.local/bin/chezmoi init {{ chezmoi_repo }} --apply"
+  when: chezmoi_apply_mode == "repo"
+
+- name: Aplicar dotfiles via fonte local
+  become_user: "{{ dev_user }}"
+  shell: "{{ dev_home }}/.local/bin/chezmoi init --source {{ playbook_dir }}/chezmoi --apply"
+  when: chezmoi_apply_mode == "local"
+
+- name: Avisar quando Chezmoi nao estiver configurado
+  debug:
+    msg: "Nenhuma fonte do Chezmoi configurada. Defina chezmoi_repo ou crie ./chezmoi para aplicar dotfiles."
+  when: chezmoi_apply_mode == "none"
 
 - name: Instalar bash-autosuggestions
   become_user: "{{ dev_user }}"

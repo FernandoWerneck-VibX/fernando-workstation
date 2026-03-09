@@ -1,0 +1,18 @@
+DEV_DIRECTORY=~/projects
+
+# Gerais
+alias ls='ls -latrh -G'
+alias tmp='cd /tmp'
+alias shells='cd ~/Shells'
+alias dev='cd $DEV_DIRECTORY'
+alias vib='cd $DEV_DIRECTORY/vib/'
+alias mvn_all='mvn clean install -DskipTests -T4'
+
+# GIT
+alias gitrb='git rebase -i'
+alias gitv='git branch -vv'
+alias gitbd='git branch -d'
+alias gst='git status'
+alias gc='git commit -v'
+alias gf='git fetch'
+alias gp='git push'

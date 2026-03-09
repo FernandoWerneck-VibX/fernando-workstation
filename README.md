@@ -17,6 +17,9 @@ A proposta principal é simples:
 - **Sistema Operacional Otimizado**
   - Atualizações automatizadas
   - Remoção de apps desnecessários
+  - Snap desativado (`snapd` removido e bloqueado)
+  - Flatpak/Flathub como padrão
+  - Codecs multimídia instalados (`mint-meta-codecs`)
   - Sysctl e ZRAM otimizados (`vm.swappiness=5`)
   - `fstrim.timer` e `irqbalance` habilitados
   - `tlp` habilitado
@@ -55,6 +58,7 @@ A proposta principal é simples:
   - Postman
   - Discord
   - Ferdium (multi-conta para mensageria)
+  - Kazam (gravação de tela)
   - Cheese (webcam/foto/vídeo rápido)
   - SSH Pilot (GUI para múltiplas conexões SSH)
   - Spotify
@@ -73,10 +77,11 @@ A proposta principal é simples:
   - pareamento de dispositivos via UI: `http://127.0.0.1:8384`
 
 - **Gerenciamento de Dotfiles**
-  - Chezmoi integrado e aplicado automaticamente
+  - Chezmoi integrado (aplica automaticamente via `chezmoi_repo` ou pasta local `./chezmoi`)
 
 - **Clonagem Automática de Projetos**
   - Repositórios definidos em `group_vars/all.yml` são clonados em `~/projects`
+  - Estrutura por subpasta suportada (ex.: `~/projects/vib/*` e `~/projects/personal/*`)
 
 ---
 
@@ -89,7 +94,25 @@ git clone git@github.com:FernandoWerneck-VibX/fernando-workstation.git
 cd fernando-workstation
 ```
 
-## 🔹 2. Execute o bootstrap
+## 🔹 2. Ajustes obrigatórios antes da primeira execução
+
+Edite o arquivo `group_vars/all.yml`:
+
+- `dev_user` e `dev_home` (se seu usuário não for `fernando`)
+- `git_user_name` e `git_user_email`
+- `chezmoi_repo` (opcional, se quiser aplicar dotfiles de um repositório remoto)
+- `projects_repos` (já vem com exemplos reais e clonagem automática habilitada)
+
+Se usar repositórios Git privados (`git@github.com:...`), garanta que sua chave SSH está configurada no GitHub antes de rodar o playbook.
+
+Se seu usuário local não for `fernando`, ajuste também `inventory.ini`:
+
+```ini
+[local]
+localhost ansible_connection=local ansible_user=SEU_USUARIO
+```
+
+## 🔹 3. Execute o bootstrap
 
 ```bash
 chmod +x bootstrap.sh
@@ -150,6 +173,31 @@ Obs: o playbook prepara o serviço e as pastas, mas o pareamento de dispositivos
 
 ---
 
+# 🧾 Onboarding Automático
+
+Ao final do playbook, é gerado um checklist com resumo do ambiente e próximos passos:
+
+```bash
+cat ~/WORKSTATION_ONBOARDING.md
+```
+
+O arquivo inclui:
+
+- O que foi provisionado
+- O que ainda precisa de configuração manual
+- Comandos de validação rápida
+
+## O que ainda é manual (resumo rápido)
+
+- Configurar `rclone config` (Google Drive) na primeira máquina
+- Parear dispositivos/pastas no Syncthing (`http://127.0.0.1:8384`)
+- Fazer logout/login para aplicar grupo `docker`
+- Configurar contas dos apps (Chrome, Discord, Ferdium, Spotify etc.)
+- Se usar Git privado: configurar chave SSH no provedor
+- Para dotfiles automáticos: definir `chezmoi_repo` ou criar uma pasta local `./chezmoi` neste projeto
+
+---
+
 # 🛠 Personalização
 
 Toda a personalização do ambiente fica em:
@@ -181,13 +229,18 @@ syncthing_folders:
   - "{{ dev_home }}/Downloads"
 cinnamon_enable_gtile: true
 
-chezmoi_repo: "https://github.com/SEU_REPO_DOTFILES"
+chezmoi_repo: ""
 
 projects_repos:
-  - name: exemplo-api
-    url: git@github.com:usuario/exemplo-api.git
-  - name: exemplo-front
-    url: git@github.com:usuario/exemplo-front.git
+  - name: telegram-bot
+    path: vib/telegram-bot
+    url: https://github.com/Vibxtech/telegram-bot.git
+  - name: workstation-monitor
+    path: vib/workstation-monitor
+    url: https://github.com/Vibxtech/workstation-monitor.git
+  - name: market-analysis-data
+    path: personal/market-analysis-data
+    url: git@github.com:FernandoWerneck/market-analysis-data.git
 
 flatpak_apps:
   - id: "md.obsidian.Obsidian"
@@ -198,6 +251,13 @@ flatpak_apps:
   - id: "com.spotify.Client"
   - id: "org.kde.audiotube"
 ```
+
+No estado atual do projeto:
+
+- `chezmoi_repo` vem vazio por padrão, mas você pode aplicar dotfiles com:
+  - repositório remoto (`chezmoi_repo`)
+  - fonte local no projeto (`./chezmoi`)
+- `projects_repos` já vem preenchido e os repositórios são clonados em `~/projects` mantendo subpastas (`vib/*` e `personal/*`)
 
 Opcional: caso queira forçar outro release Ubuntu para o repositório Docker, defina:
 
@@ -274,7 +334,13 @@ type _fzf_history
 ## 🔹 Ver logs de erros do Ansible
 
 ```bash
-cat ansible.log
+./bootstrap.sh 2>&1 | tee bootstrap.log
+```
+
+ou
+
+```bash
+ansible-playbook -i inventory.ini site.yml --ask-become-pass -vv 2>&1 | tee ansible-run.log
 ```
 
 ---

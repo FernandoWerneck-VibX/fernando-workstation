@@ -55,6 +55,29 @@
       - irqbalance
       - tlp
       - systemd-zram-generator
+      - kazam
+
+- name: Remover snapd para manter Snap desativado
+  apt:
+    name: snapd
+    purge: yes
+    autoremove: yes
+    state: absent
+
+- name: Bloquear reinstalacao de snapd via apt
+  copy:
+    dest: /etc/apt/preferences.d/nosnap.pref
+    mode: "0644"
+    content: |
+      Package: snapd
+      Pin: release a=*
+      Pin-Priority: -10
+
+- name: Instalar codecs multimidia no Linux Mint
+  apt:
+    name: mint-meta-codecs
+    state: present
+  when: ansible_distribution == "Linux Mint"
 
 - name: Remover power-profiles-daemon para evitar conflito com TLP
   apt:

@@ -1,0 +1,73 @@
+# Workstation Onboarding
+
+Arquivo gerado automaticamente pelo Ansible em {{ ansible_date_time.iso8601 }}.
+
+## Resumo
+
+- Usuario: `{{ dev_user }}`
+- Home: `{{ dev_home }}`
+- Linux Mint: `{{ ansible_distribution_version }}`
+- Cinnamon: provisionado
+- Shell padrao: Bash
+- Snap: desativado (snapd removido e bloqueado por pin apt)
+- Flatpak/Flathub: habilitado como padrao
+- Swappiness: `5`
+- TLP: habilitado
+- Chezmoi modo: `{{ chezmoi_apply_mode | default('none') }}`
+- Repositorios para clone automatico: `{{ projects_repos | length }}`
+
+## Apps Desktop Provisionados
+
+{% for app in flatpak_apps %}
+- `{{ app.id }}`
+{% endfor %}
+- `kazam` (apt)
+- `mint-meta-codecs` (apt, Linux Mint)
+
+## Recursos de Infra e Dev
+
+- Docker Engine + Docker Compose plugin
+- kubectl, helm, k9s, kind
+- SDKMAN (Java), NVM (Node), Pyenv (Python), Flutter
+- Syncthing (`syncthing@{{ dev_user }}`)
+- Google Drive via rclone (bind para `~/docs`)
+
+## Repositorios de Projeto (clone automatico)
+
+{% for repo in projects_repos %}
+- `{{ repo.url }}` -> `{{ projects_dir }}/{{ repo.path | default(repo.name) }}`
+{% else %}
+- Nenhum repositorio configurado em `projects_repos`
+{% endfor %}
+
+## Acoes Manuais (obrigatorias e opcionais)
+
+1. Validar variaveis em `group_vars/all.yml`:
+   - `dev_user`, `dev_home`, `git_user_name`, `git_user_email`
+   - `projects_repos` (opcional, se quiser customizar a lista de clone)
+   - `chezmoi_repo` (opcional) ou pasta local `./chezmoi` (se quiser aplicar dotfiles)
+2. Se usar repositorios Git privados:
+   - Garantir chave SSH no provedor Git (GitHub/GitLab)
+3. Configurar Google Drive na primeira maquina:
+   - `rclone config`
+   - Criar remote com nome `gdrive`
+4. Parear Syncthing entre maquinas:
+   - Abrir `http://127.0.0.1:8384`
+   - Adicionar Device IDs e compartilhar pastas
+5. Validar Docker para usuario sem sudo:
+   - Fazer logout/login apos provisionamento
+6. Configurar contas nos apps:
+   - Ferdium, Discord, Spotify, SSH Pilot, Chrome
+7. Validar/ajustar dotfiles (chezmoi):
+   - `chezmoi status`
+
+## Comandos de Validacao Rapida
+
+```bash
+systemctl status syncthing@{{ dev_user }} --no-pager
+systemctl status rclone-gdrive --no-pager
+docker version
+docker compose version
+flatpak remotes
+apt-cache policy snapd
+```

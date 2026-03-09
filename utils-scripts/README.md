@@ -41,7 +41,8 @@ Execute diretamente:
 Ou adicione ao PATH:
 
 ```bash
-export PATH="$HOME/utils-scripts/system:$HOME/utils-scripts/git:$HOME/utils-scripts/docker:$HOME/utils-scripts/k8s:$HOME/utils-scripts/gdrive:$HOME/utils-scripts/dev:$PATH"
+REPO_DIR="$HOME/fernando-workstation" # ajuste para o caminho onde voce clonou este repositorio
+export PATH="$REPO_DIR/utils-scripts/system:$REPO_DIR/utils-scripts/git:$REPO_DIR/utils-scripts/docker:$REPO_DIR/utils-scripts/k8s:$REPO_DIR/utils-scripts/gdrive:$REPO_DIR/utils-scripts/dev:$PATH"
 ```
 
 ---
@@ -130,10 +131,11 @@ Sobe API e Frontend em paralelo.
 # Sugestão de Alias
 
 ```bash
-alias update="~/utils-scripts/system/update-system.sh"
-alias clean="~/utils-scripts/system/cleanup.sh"
-alias dr="~/utils-scripts/docker/docker-reset.sh"
-alias kc="~/utils-scripts/k8s/k8s-ctx.sh"
+REPO_DIR="$HOME/fernando-workstation" # ajuste para o caminho onde voce clonou este repositorio
+alias update="$REPO_DIR/utils-scripts/system/update-system.sh"
+alias clean="$REPO_DIR/utils-scripts/system/cleanup.sh"
+alias dr="$REPO_DIR/utils-scripts/docker/docker-reset.sh"
+alias kc="$REPO_DIR/utils-scripts/k8s/k8s-ctx.sh"
 ```
 
 ---

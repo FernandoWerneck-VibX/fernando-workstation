@@ -1,0 +1,12 @@
+---
+- name: Gerar checklist de onboarding da workstation
+  template:
+    src: workstation_onboarding.md.j2
+    dest: "{{ onboarding_file }}"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+
+- name: Exibir local do checklist de onboarding
+  debug:
+    msg: "Checklist de onboarding gerado em {{ onboarding_file }}"

@@ -82,11 +82,16 @@ flatpak_apps:
       apt: "cheese"
   - id: "io.github.mfat.sshpilot"
   - id: "org.kde.audiotube"
-chezmoi_repo: "https://github.com/SEU_REPO_DOTFILES"
+chezmoi_repo: ""
 apt_cache_valid_time: 3600
 projects_dir: "{{ dev_home }}/projects"
 projects_repos:
-  - name: exemplo-api
-    url: "git@github.com:usuario/exemplo-api.git"
-  - name: exemplo-front
-    url: "git@github.com:usuario/exemplo-front.git"
+  - name: telegram-bot
+    path: "vib/telegram-bot"
+    url: "https://github.com/Vibxtech/telegram-bot.git"
+  - name: workstation-monitor
+    path: "vib/workstation-monitor"
+    url: "https://github.com/Vibxtech/workstation-monitor.git"
+  - name: market-analysis-data
+    path: "personal/market-analysis-data"
+    url: "git@github.com:FernandoWerneck/market-analysis-data.git"
