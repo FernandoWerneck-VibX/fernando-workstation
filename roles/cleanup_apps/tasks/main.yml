@@ -1,0 +1,7 @@
+---
+- name: Remover apps desnecessarios na etapa final
+  apt:
+    name: "{{ cleanup_apps_packages }}"
+    purge: yes
+    autoremove: yes
+    state: absent

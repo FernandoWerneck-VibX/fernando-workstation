@@ -1,0 +1,20 @@
+---
+cleanup_apps_packages:
+  - firefox
+  - geary
+  - "libreoffice*"
+  - rhythmbox
+  - remmina
+  - thunderbird
+  - hexchat
+  - warpinator
+  - hypnotix
+  - totem
+  - gnome-maps
+  - gnome-weather
+  - gnome-clocks
+  - gnome-contacts
+  - gnome-characters
+  - gnome-mahjongg
+  - gnome-mines
+  - gnome-sudoku

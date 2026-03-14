@@ -30,6 +30,9 @@
     repo: https://github.com/magicmonty/bash-git-prompt.git
     dest: "{{ dev_home }}/.bash-git-prompt"
     depth: 1
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+    GIT_ASKPASS: /bin/true
 
 - name: Garantir diretorio local de binarios do Chezmoi
   file:
@@ -72,6 +75,9 @@
   become_user: "{{ dev_user }}"
   shell: "{{ dev_home }}/.local/bin/chezmoi init {{ chezmoi_repo }} --apply"
   when: chezmoi_apply_mode == "repo"
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+    GIT_ASKPASS: /bin/true
 
 - name: Aplicar dotfiles via fonte local
   become_user: "{{ dev_user }}"
@@ -100,6 +106,9 @@
   git:
     repo: https://github.com/mimipepsi/bash-autosuggestions.git
     dest: "{{ dev_home }}/.bash-autosuggestions"
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+    GIT_ASKPASS: /bin/true
 
 - name: Ativar bash-autosuggestions
   become_user: "{{ dev_user }}"
@@ -113,6 +122,9 @@
   git:
     repo: https://github.com/bhilburn/bash-syntax-highlighting.git
     dest: "{{ dev_home }}/.bash-syntax-highlighting"
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+    GIT_ASKPASS: /bin/true
 
 - name: Ativar bash-syntax-highlighting
   become_user: "{{ dev_user }}"
@@ -140,6 +152,9 @@
   git:
     repo: https://github.com/mniip/bash-you-should-use.git
     dest: "{{ dev_home }}/.bash-you-should-use"
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+    GIT_ASKPASS: /bin/true
 
 - name: Ativar bash-you-should-use
   become_user: "{{ dev_user }}"

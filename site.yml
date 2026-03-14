@@ -15,4 +15,5 @@
       when: syncthing_enable | default(true) | bool
     - role: gdrive
       when: gdrive_enable | default(true) | bool
+    - cleanup_apps
     - onboarding

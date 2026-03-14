@@ -22,6 +22,9 @@
     dest: "{{ dev_home }}/.local/share/cinnamon/extensions/{{ cinnamon_gtile_extension_id }}"
     version: master
     update: yes
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+    GIT_ASKPASS: /bin/true
   when:
     - cinnamon_enable_gtile | bool
     - cinnamon_extensions_writable.rc == 0
