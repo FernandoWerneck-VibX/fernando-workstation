@@ -8,6 +8,7 @@ flatpak_apps:
     fallback:
       deb: "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
       package_name: "google-chrome-stable"
+  - id: "org.mozilla.firefox"
   - id: "io.github.celluloid_player.Celluloid"
     fallback:
       apt: "celluloid"

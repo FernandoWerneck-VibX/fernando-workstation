@@ -31,6 +31,9 @@ A proposta principal é simples:
   - Java (SDKMAN, Maven, Gradle)
   - Node (NVM, Yarn, PNPM, Vue CLI, Vite)
   - Python (Pyenv)
+  - `pipx` para CLIs Python isolados
+  - `uv` para toolchain Python e ferramentas de projeto
+  - `pre-commit`, `yamllint` e `ansible-lint`
   - Flutter SDK
 
 - **DevOps e Kubernetes**
@@ -48,10 +51,12 @@ A proposta principal é simples:
   - ble.sh (autosuggestions + syntax highlighting)
   - pay-respects (correção/sugestão de comandos)
   - Git com autocompletion
+  - carregamento modular via `~/.bashrc.d`
   - Zsh não é configurado por padrão
 
 - **Aplicativos Essenciais**
   - Chrome
+  - Firefox
   - Visual Studio Code
   - IntelliJ IDEA Ultimate
   - Sublime Text
@@ -61,6 +66,7 @@ A proposta principal é simples:
   - Ferdium (multi-conta para mensageria)
   - Kazam (gravação de tela)
   - Snapshot/Cheese (webcam/foto/vídeo rápido)
+  - Extension Manager para GNOME Shell
   - SSH Pilot (GUI para múltiplas conexões SSH)
   - Spotify
   - Audiotube (YouTube Music)
@@ -139,6 +145,15 @@ O script irá:
 3. Executar o playbook principal
 
 Atualizações do sistema, upgrades e demais mudanças de estado ficam centralizadas no playbook, não no `bootstrap.sh`.
+
+Se preferir, o repositório também expõe atalhos via `Makefile`:
+
+```bash
+make install
+make install PROFILE=collaborator.yml
+make check
+make lint
+```
 
 ## 🔹 4. Use perfis por tipo de máquina (pessoal x colaborador)
 
@@ -270,6 +285,7 @@ syncthing_folders:
 cinnamon_enable_gtile: true
 common_tlp_notebook_only: true
 common_enable_tlp_pd: true
+shell_env_dir: "{{ dev_home }}/.bashrc.d"
 
 chezmoi_repo: ""
 
@@ -304,6 +320,8 @@ No estado atual do projeto:
 - `gTile` é instalado a partir do repositório oficial `linuxmint/cinnamon-spices-extensions`
 - `tlp` só é aplicado automaticamente quando a máquina é detectada como notebook
 - `tlp-pd` é instalado apenas se existir nos repositórios apt disponíveis
+- integrações do Bash ficam em arquivos separados dentro de `~/.bashrc.d`
+- `pre-commit`, `yamllint` e `ansible-lint` são instalados via `uv tool install`
 
 Opcional: caso queira forçar outro release Ubuntu para o repositório Docker, defina:
 
@@ -374,7 +392,15 @@ ls ~/projects
 
 ```bash
 echo $PROMPT_COMMAND
-type _fzf_history
+type __fzf_history
+ls ~/.bashrc.d
+```
+
+## 🔹 Rodar validações do repositório
+
+```bash
+make check
+make lint
 ```
 
 ## 🔹 Ver logs de erros do Ansible

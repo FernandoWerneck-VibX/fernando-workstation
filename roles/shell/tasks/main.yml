@@ -18,6 +18,7 @@
     - command: git config --global user.name "{{ git_user_name }}"
     - command: git config --global user.email "{{ git_user_email }}"
     - command: git config --global init.defaultBranch main
+    - command: git config --global core.editor vim
 
 - name: Baixar git-completion
   get_url:
@@ -90,16 +91,23 @@
   when: chezmoi_apply_mode == "none"
 
 - name: Ativar bash-git-prompt
+  copy:
+    dest: "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/20-bash-git-prompt.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
+      if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then
+        GIT_PROMPT_ONLY_IN_REPO=1
+        source "$HOME/.bash-git-prompt/gitprompt.sh"
+      fi
+
+- name: Remover bloco legado do bash-git-prompt do Bash
   become_user: "{{ dev_user }}"
   blockinfile:
     path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
     marker: "# {mark} ANSIBLE MANAGED BLOCK - bash-git-prompt"
-    block: |
-      if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then
-          GIT_PROMPT_ONLY_IN_REPO=1
-          source "$HOME/.bash-git-prompt/gitprompt.sh"
-      fi
+    state: absent
 
 - name: Garantir diretorio de fontes locais para ferramentas de shell
   file:
@@ -136,15 +144,22 @@
   when: not blesh_installed.stat.exists or blesh_repo.changed
 
 - name: Ativar ble.sh no Bash
+  copy:
+    dest: "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/30-ble.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
+      if [ -f "$HOME/.local/share/blesh/ble.sh" ]; then
+        source -- "$HOME/.local/share/blesh/ble.sh"
+      fi
+
+- name: Remover bloco legado do ble.sh do Bash
   become_user: "{{ dev_user }}"
   blockinfile:
     path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
     marker: "# {mark} ANSIBLE MANAGED BLOCK - ble.sh"
-    block: |
-      if [ -f "$HOME/.local/share/blesh/ble.sh" ]; then
-          source -- "$HOME/.local/share/blesh/ble.sh"
-      fi
+    state: absent
 
 - name: Definir arquitetura deb do pay-respects
   set_fact:
@@ -241,20 +256,50 @@
   when: pay_respects_installed_version != pay_respects_version
 
 - name: Ativar pay-respects no Bash
-  become_user: "{{ dev_user }}"
-  blockinfile:
-    path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - pay-respects"
-    block: |
+  copy:
+    dest: "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/70-pay-respects.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
       if command -v pay-respects >/dev/null 2>&1; then
-          eval "$(pay-respects bash --alias fuck)"
+        eval "$(pay-respects bash --alias fuck)"
       fi
 
-- name: FZF History Search
+- name: Remover bloco legado do pay-respects do Bash
   become_user: "{{ dev_user }}"
   blockinfile:
     path: "{{ dev_home }}/.bashrc"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - pay-respects"
+    state: absent
+
+- name: FZF History Search
+  copy:
+    dest: "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/80-fzf-history.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
+      __fzf_history() {
+        local selected
+        selected="$(
+          fc -ln 1 \
+            | awk '!seen[$0]++' \
+            | fzf --tac --height 40% --reverse --query="$READLINE_LINE"
+        )"
+        if [ -n "$selected" ]; then
+          READLINE_LINE="$selected"
+          READLINE_POINT=${#READLINE_LINE}
+        fi
+      }
+
+      bind -x '"\C-r": __fzf_history'
+
+- name: Remover bloco legado do FZF History do Bash
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    state: absent
     block: |
       {% raw %}
       __fzf_history() {

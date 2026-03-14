@@ -1,0 +1,2 @@
+---
+shell_env_dir: "{{ dev_home }}/.bashrc.d"

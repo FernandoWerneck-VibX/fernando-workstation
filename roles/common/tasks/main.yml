@@ -46,16 +46,23 @@
       - git
       - ca-certificates
       - apt-transport-https
+      - gzip
       - unzip
       - zip
       - tar
       - htop
+      - rsync
+      - vim
+      - rar
+      - unrar
       - fzf
       - ripgrep
       - bat
       - gpg
       - jq
       - gawk
+      - libglib2.0-bin
+      - gnome-shell-extension-manager
       - bash-completion
       - file
       - software-properties-common

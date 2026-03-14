@@ -1,0 +1,44 @@
+---
+- name: Garantir diretorio de configuracoes modulares do Bash
+  file:
+    path: "{{ shell_env_dir }}"
+    state: directory
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0755"
+
+- name: Garantir carregamento de ~/.bashrc.d no Bash
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - bashrc.d loader"
+    block: |
+      if [ -d "$HOME/.bashrc.d" ]; then
+        for bashrc_file in "$HOME"/.bashrc.d/*.sh; do
+          [ -r "$bashrc_file" ] || continue
+          . "$bashrc_file"
+        done
+      fi
+
+- name: Garantir PATH local do usuario no Bash
+  copy:
+    dest: "{{ shell_env_dir }}/00-local-bin.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
+      if [ -d "$HOME/.local/bin" ] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+        export PATH="$HOME/.local/bin:$PATH"
+      fi
+
+- name: Garantir carregamento de aliases do Bash
+  copy:
+    dest: "{{ shell_env_dir }}/10-bash-aliases.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
+      if [ -f "$HOME/.bash_aliases" ]; then
+        source "$HOME/.bash_aliases"
+      fi

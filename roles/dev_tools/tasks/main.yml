@@ -15,15 +15,22 @@
   args: {executable: /bin/bash}
 
 - name: Ativar SDKMAN no Bash
-  become_user: "{{ dev_user }}"
-  blockinfile:
-    path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - sdkman"
-    block: |
+  copy:
+    dest: "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/40-sdkman.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
       if [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
         source "$HOME/.sdkman/bin/sdkman-init.sh"
       fi
+
+- name: Remover bloco legado do SDKMAN no Bash
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - sdkman"
+    state: absent
 
 - name: Instalar NVM
   become_user: "{{ dev_user }}"
@@ -41,19 +48,28 @@
     npm install -g yarn pnpm @vue/cli create-vite
 
 - name: Ativar NVM no Bash
-  become_user: "{{ dev_user }}"
-  blockinfile:
-    path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - nvm"
-    block: |
+  copy:
+    dest: "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/50-nvm.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
       export NVM_DIR="$HOME/.nvm"
       [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
       [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
+- name: Remover bloco legado do NVM no Bash
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - nvm"
+    state: absent
+
 - name: Dependências Pyenv
   apt:
     name:
+      - pipx
+      - python3-venv
       - make
       - build-essential
       - libssl-dev
@@ -66,6 +82,21 @@
       - libffi-dev
       - liblzma-dev
       - python3-openssl
+
+- name: Verificar uv instalado
+  stat:
+    path: "{{ dev_home }}/.local/bin/uv"
+  register: uv_bin
+
+- name: Instalar uv
+  become_user: "{{ dev_user }}"
+  shell: curl -LsSf https://astral.sh/uv/install.sh | sh
+  args:
+    executable: /bin/bash
+  environment:
+    UV_INSTALL_DIR: "{{ dev_home }}/.local/bin"
+    UV_NO_MODIFY_PATH: "1"
+  when: not uv_bin.stat.exists
 
 - name: Instalar Pyenv
   become_user: "{{ dev_user }}"
@@ -84,17 +115,56 @@
   args: {executable: /bin/bash}
 
 - name: Ativar Pyenv no Bash
-  become_user: "{{ dev_user }}"
-  blockinfile:
-    path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - pyenv"
-    block: |
+  copy:
+    dest: "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/60-pyenv.sh"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    content: |
       export PYENV_ROOT="$HOME/.pyenv"
       if [ -d "$PYENV_ROOT/bin" ]; then
         export PATH="$PYENV_ROOT/bin:$PATH"
         eval "$(pyenv init -)"
       fi
+
+- name: Remover bloco legado do Pyenv no Bash
+  become_user: "{{ dev_user }}"
+  blockinfile:
+    path: "{{ dev_home }}/.bashrc"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - pyenv"
+    state: absent
+
+- name: Instalar ferramentas Python de desenvolvimento via uv
+  become_user: "{{ dev_user }}"
+  shell: |
+    set -euo pipefail
+    export PATH="{{ dev_home }}/.local/bin:$PATH"
+
+    install_or_upgrade_tool() {
+      local tool_name="$1"
+
+      if ! uv tool install "$tool_name"; then
+        uv tool upgrade "$tool_name"
+      fi
+    }
+
+    install_or_upgrade_tool pre-commit
+    install_or_upgrade_tool yamllint
+    install_or_upgrade_tool ansible-lint
+  args:
+    executable: /bin/bash
+
+- name: Verificar se este repositorio possui .git
+  stat:
+    path: "{{ playbook_dir }}/.git"
+  register: dev_tools_repo_git
+
+- name: Instalar hook local do pre-commit neste repositorio
+  become_user: "{{ dev_user }}"
+  command: "{{ dev_home }}/.local/bin/pre-commit install"
+  args:
+    chdir: "{{ playbook_dir }}"
+  when: dev_tools_repo_git.stat.exists
 
 - name: Baixar releases do Flutter
   uri:

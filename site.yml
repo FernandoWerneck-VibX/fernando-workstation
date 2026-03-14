@@ -5,6 +5,7 @@
   roles:
     - common
     - cinnamon
+    - shell_env
     - shell
     - dev_tools
     - devops
