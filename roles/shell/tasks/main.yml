@@ -162,27 +162,6 @@
           eval "$(thefuck --alias)"
       fi
 
-- name: Remover source legado do bash-autosuggestions
-  become_user: "{{ dev_user }}"
-  lineinfile:
-    path: "{{ dev_home }}/.bashrc"
-    state: absent
-    line: 'source "$HOME/.bash-autosuggestions/bash-autosuggestions.sh"'
-
-- name: Remover source legado do bash-syntax-highlighting
-  become_user: "{{ dev_user }}"
-  lineinfile:
-    path: "{{ dev_home }}/.bashrc"
-    state: absent
-    line: 'source "$HOME/.bash-syntax-highlighting/bash-syntax-highlighting.sh"'
-
-- name: Remover source legado do bash-you-should-use
-  become_user: "{{ dev_user }}"
-  lineinfile:
-    path: "{{ dev_home }}/.bashrc"
-    state: absent
-    line: 'source "$HOME/.bash-you-should-use/you-should-use.sh"'
-
 - name: FZF History Search
   become_user: "{{ dev_user }}"
   blockinfile:
