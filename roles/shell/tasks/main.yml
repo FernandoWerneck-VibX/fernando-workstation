@@ -31,9 +31,19 @@
     dest: "{{ dev_home }}/.bash-git-prompt"
     depth: 1
 
+- name: Garantir diretorio local de binarios do Chezmoi
+  file:
+    path: "{{ dev_home }}/.local/bin"
+    state: directory
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0755"
+
 - name: Instalar Chezmoi
   become_user: "{{ dev_user }}"
-  shell: sh -c "$(curl -fsLS get.chezmoi.io)"
+  shell: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "{{ dev_home }}/.local/bin"
+  args:
+    creates: "{{ dev_home }}/.local/bin/chezmoi"
 
 - name: Verificar fonte local do Chezmoi no projeto
   stat:
