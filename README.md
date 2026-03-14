@@ -44,9 +44,6 @@ A proposta principal é simples:
   - fzf
   - ripgrep
   - bat
-  - bash-autosuggestions
-  - bash-syntax-highlighting
-  - bash-you-should-use
   - bash-git-prompt
   - Git com autocompletion
   - Zsh não é configurado por padrão

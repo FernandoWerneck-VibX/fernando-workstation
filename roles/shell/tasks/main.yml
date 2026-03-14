@@ -101,38 +101,6 @@
           source "$HOME/.bash-git-prompt/gitprompt.sh"
       fi
 
-- name: Instalar bash-autosuggestions
-  become_user: "{{ dev_user }}"
-  git:
-    repo: https://github.com/mimipepsi/bash-autosuggestions.git
-    dest: "{{ dev_home }}/.bash-autosuggestions"
-  environment:
-    GIT_TERMINAL_PROMPT: "0"
-    GIT_ASKPASS: /bin/true
-
-- name: Ativar bash-autosuggestions
-  become_user: "{{ dev_user }}"
-  lineinfile:
-    path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
-    line: 'source "$HOME/.bash-autosuggestions/bash-autosuggestions.sh"'
-
-- name: Instalar bash-syntax-highlighting
-  become_user: "{{ dev_user }}"
-  git:
-    repo: https://github.com/bhilburn/bash-syntax-highlighting.git
-    dest: "{{ dev_home }}/.bash-syntax-highlighting"
-  environment:
-    GIT_TERMINAL_PROMPT: "0"
-    GIT_ASKPASS: /bin/true
-
-- name: Ativar bash-syntax-highlighting
-  become_user: "{{ dev_user }}"
-  lineinfile:
-    path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
-    line: 'source "$HOME/.bash-syntax-highlighting/bash-syntax-highlighting.sh"'
-
 - name: FZF History Search
   become_user: "{{ dev_user }}"
   blockinfile:
@@ -146,19 +114,3 @@
       }
       bind '"\C-r": "__fzf_history"'
       {% endraw %}
-
-- name: Instalar bash-you-should-use
-  become_user: "{{ dev_user }}"
-  git:
-    repo: https://github.com/mniip/bash-you-should-use.git
-    dest: "{{ dev_home }}/.bash-you-should-use"
-  environment:
-    GIT_TERMINAL_PROMPT: "0"
-    GIT_ASKPASS: /bin/true
-
-- name: Ativar bash-you-should-use
-  become_user: "{{ dev_user }}"
-  lineinfile:
-    path: "{{ dev_home }}/.bashrc"
-    insertafter: EOF
-    line: 'source "$HOME/.bash-you-should-use/you-should-use.sh"'
