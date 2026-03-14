@@ -121,6 +121,13 @@ chmod +x bootstrap.sh
 ./bootstrap.sh
 ```
 
+O `bootstrap.sh` pergunta interativamente qual perfil usar (`default`, `personal.yml` ou `collaborator.yml`).
+Se preferir sem prompt, passe o perfil por argumento:
+
+```bash
+./bootstrap.sh collaborator.yml
+```
+
 Execute como usuario comum (nao `root` e sem `sudo` no comando do playbook).
 O provisionamento valida `dev_user` e interrompe se ele resolver para `root`.
 

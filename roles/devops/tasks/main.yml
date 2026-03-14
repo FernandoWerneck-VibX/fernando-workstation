@@ -269,18 +269,45 @@
   register: k9s_tmp
   when: k9s_installed_version != k9s_resolved_version
 
-- name: Baixar checksums do k9s
+- name: Baixar checksums do k9s (formato atual)
+  uri:
+    url: "https://github.com/derailed/k9s/releases/download/{{ k9s_resolved_version }}/checksums.sha256"
+    return_content: yes
+  register: k9s_checksums_sha256
+  failed_when: false
+  when: k9s_installed_version != k9s_resolved_version
+
+- name: Baixar checksums do k9s (fallback legado)
   uri:
     url: "https://github.com/derailed/k9s/releases/download/{{ k9s_resolved_version }}/checksums.txt"
     return_content: yes
-  register: k9s_checksums
+  register: k9s_checksums_txt
+  failed_when: false
+  when:
+    - k9s_installed_version != k9s_resolved_version
+    - k9s_checksums_sha256.status is not defined or k9s_checksums_sha256.status != 200
+
+- name: Falhar se checksums do k9s nao forem encontrados
+  fail:
+    msg: "Falha ao baixar checksums do k9s para {{ k9s_resolved_version }}. Verifique release/rede/proxy."
+  when:
+    - k9s_installed_version != k9s_resolved_version
+    - (k9s_checksums_sha256.status is not defined or k9s_checksums_sha256.status != 200)
+    - (k9s_checksums_txt is not defined or k9s_checksums_txt.status is not defined or k9s_checksums_txt.status != 200)
+
+- name: Consolidar checksums do k9s
+  set_fact:
+    k9s_checksums_content: >-
+      {{ k9s_checksums_sha256.content
+         if (k9s_checksums_sha256.status is defined and k9s_checksums_sha256.status == 200)
+         else (k9s_checksums_txt.content | default('')) }}
   when: k9s_installed_version != k9s_resolved_version
 
 - name: Definir checksum do k9s
   set_fact:
     k9s_filename: "k9s_Linux_{{ devops_arch }}.tar.gz"
     k9s_checksum: >-
-      {{ (k9s_checksums.content.splitlines()
+      {{ (k9s_checksums_content.splitlines()
           | select('search', 'k9s_Linux_' ~ devops_arch ~ '.tar.gz')
           | list | first).split()[0] }}
   when: k9s_installed_version != k9s_resolved_version
