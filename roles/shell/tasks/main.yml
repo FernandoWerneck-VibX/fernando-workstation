@@ -148,8 +148,22 @@
 
 - name: Instalar thefuck
   apt:
-    name: thefuck
+    name:
+      - pipx
+      - python3-venv
     state: present
+
+- name: Remover thefuck do apt para evitar conflito com Python 3.12
+  apt:
+    name: thefuck
+    state: absent
+
+- name: Instalar thefuck via pipx
+  become_user: "{{ dev_user }}"
+  command: pipx install --force thefuck
+  environment:
+    PIPX_HOME: "{{ dev_home }}/.local/pipx"
+    PIPX_BIN_DIR: "{{ dev_home }}/.local/bin"
 
 - name: Ativar thefuck no Bash
   become_user: "{{ dev_user }}"
@@ -158,6 +172,9 @@
     insertafter: EOF
     marker: "# {mark} ANSIBLE MANAGED BLOCK - thefuck"
     block: |
+      if [ -d "$HOME/.local/bin" ]; then
+          export PATH="$HOME/.local/bin:$PATH"
+      fi
       if command -v thefuck >/dev/null 2>&1; then
           eval "$(thefuck --alias)"
       fi
