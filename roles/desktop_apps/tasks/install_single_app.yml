@@ -7,24 +7,74 @@
 
 - name: Instalar app Flatpak
   command: flatpak install -y --system {{ flatpak_remote_name }} {{ desktop_app.id }}
+  register: flatpak_install
+  failed_when: false
   when: flatpak_info.rc != 0
 
 - name: Fallback para instalacao do app
-  when: flatpak_info.rc != 0
+  when:
+    - flatpak_info.rc != 0
+    - flatpak_install.rc is defined
+    - flatpak_install.rc != 0
   block:
     - name: Avisar sobre falha do Flatpak
       debug:
-        msg: "Falha ao instalar {{ desktop_app.id }} via Flatpak. Verifique rede/Flathub; tentando fallback."
+        msg: >-
+          Falha ao instalar {{ desktop_app.id }} via Flatpak (rc={{ flatpak_install.rc }}).
+          stderr='{{ flatpak_install.stderr | default('') | trim }}'
+          Tentando fallback.
 
     - name: Fallback para apt/deb
       when: desktop_app.fallback is defined
       block:
+        - name: Criar arquivo temporario para chave do repo apt
+          when: desktop_app.fallback.apt_key_url is defined
+          tempfile:
+            state: file
+            suffix: aptkey
+          register: apt_key_tmp
+
         - name: Baixar chave do repo apt
           when: desktop_app.fallback.apt_key_url is defined
           get_url:
             url: "{{ desktop_app.fallback.apt_key_url }}"
+            dest: "{{ apt_key_tmp.path }}"
+            mode: "0644"
+
+        - name: Converter chave apt para formato keyring (dearmor)
+          when: desktop_app.fallback.apt_key_url is defined
+          command: >
+            gpg --dearmor --yes
+            --output {{ desktop_app.fallback.apt_key_dest | default('/etc/apt/keyrings/' ~ (desktop_app.id | replace('.', '-')) ~ '.gpg') }}
+            {{ apt_key_tmp.path }}
+          register: apt_key_dearmor
+          failed_when: false
+
+        - name: Copiar chave apt sem dearmor (fallback)
+          when:
+            - desktop_app.fallback.apt_key_url is defined
+            - apt_key_dearmor.rc != 0
+          copy:
+            src: "{{ apt_key_tmp.path }}"
             dest: "{{ desktop_app.fallback.apt_key_dest | default('/etc/apt/keyrings/' ~ (desktop_app.id | replace('.', '-')) ~ '.gpg') }}"
             mode: "0644"
+            remote_src: yes
+
+        - name: Garantir permissao da chave apt convertida
+          when:
+            - desktop_app.fallback.apt_key_url is defined
+            - apt_key_dearmor.rc == 0
+          file:
+            path: "{{ desktop_app.fallback.apt_key_dest | default('/etc/apt/keyrings/' ~ (desktop_app.id | replace('.', '-')) ~ '.gpg') }}"
+            mode: "0644"
+
+        - name: Limpar temporario da chave apt
+          when:
+            - desktop_app.fallback.apt_key_url is defined
+            - apt_key_tmp.path is defined
+          file:
+            path: "{{ apt_key_tmp.path }}"
+            state: absent
 
         - name: Adicionar repo apt
           when: desktop_app.fallback.apt_repo is defined
