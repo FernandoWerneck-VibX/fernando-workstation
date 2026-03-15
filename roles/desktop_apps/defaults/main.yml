@@ -33,6 +33,7 @@ desktop_apps_catalog:
         Architectures: amd64,arm64,armhf
         Signed-By: /usr/share/keyrings/microsoft.gpg
       apt_package: "code"
+      validate_path: "/usr/bin/code"
   - id: "intellij-idea-ultimate"
   - id: "com.sublimetext.three"
     fallback:

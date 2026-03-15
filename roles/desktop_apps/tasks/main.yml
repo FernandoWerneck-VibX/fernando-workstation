@@ -86,10 +86,15 @@
 
 - name: Validar apps desktop instalados
   shell: |
+    is_pkg_installed() {
+      local pkg="$1"
+      [ -n "$pkg" ] || return 1
+      [ "$(dpkg-query -W -f='${db:Status-Status}' "$pkg" 2>/dev/null || true)" = "installed" ]
+    }
     if flatpak info --system "{{ item.id }}" >/dev/null 2>&1; then exit 0; fi
-    if [ -n "{{ (item.fallback.apt | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.apt | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
-    if [ -n "{{ (item.fallback.apt_package | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.apt_package | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
-    if [ -n "{{ (item.fallback.package_name | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.package_name | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
+    if is_pkg_installed "{{ (item.fallback.apt | default('')) if item.fallback is defined else '' }}"; then exit 0; fi
+    if is_pkg_installed "{{ (item.fallback.apt_package | default('')) if item.fallback is defined else '' }}"; then exit 0; fi
+    if is_pkg_installed "{{ (item.fallback.package_name | default('')) if item.fallback is defined else '' }}"; then exit 0; fi
     if [ -n "{{ (item.fallback.validate_path | default('')) if item.fallback is defined else '' }}" ] && [ -e "{{ (item.fallback.validate_path | default('')) if item.fallback is defined else '' }}" ]; then
       if [ -n "{{ (item.fallback.desired_version | default('')) if item.fallback is defined else '' }}" ] && [ -n "{{ (item.fallback.version_file | default('')) if item.fallback is defined else '' }}" ]; then
         current_version="$(jq -r '.{{ (item.fallback.version_json_key | default('version')) if item.fallback is defined else 'version' }}' "{{ (item.fallback.version_file | default('')) if item.fallback is defined else '' }}" 2>/dev/null || true)"

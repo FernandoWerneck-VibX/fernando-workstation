@@ -1,9 +1,14 @@
 ---
 - name: Verificar app fallback instalada
   shell: |
-    if [ -n "{{ (desktop_app.fallback.apt | default('')) if desktop_app.fallback is defined else '' }}" ]; then dpkg -s "{{ (desktop_app.fallback.apt | default('')) if desktop_app.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
-    if [ -n "{{ (desktop_app.fallback.apt_package | default('')) if desktop_app.fallback is defined else '' }}" ]; then dpkg -s "{{ (desktop_app.fallback.apt_package | default('')) if desktop_app.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
-    if [ -n "{{ (desktop_app.fallback.package_name | default('')) if desktop_app.fallback is defined else '' }}" ]; then dpkg -s "{{ (desktop_app.fallback.package_name | default('')) if desktop_app.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
+    is_pkg_installed() {
+      local pkg="$1"
+      [ -n "$pkg" ] || return 1
+      [ "$(dpkg-query -W -f='${db:Status-Status}' "$pkg" 2>/dev/null || true)" = "installed" ]
+    }
+    if is_pkg_installed "{{ (desktop_app.fallback.apt | default('')) if desktop_app.fallback is defined else '' }}"; then exit 0; fi
+    if is_pkg_installed "{{ (desktop_app.fallback.apt_package | default('')) if desktop_app.fallback is defined else '' }}"; then exit 0; fi
+    if is_pkg_installed "{{ (desktop_app.fallback.package_name | default('')) if desktop_app.fallback is defined else '' }}"; then exit 0; fi
     if [ -n "{{ (desktop_app.fallback.validate_path | default('')) if desktop_app.fallback is defined else '' }}" ] && [ -e "{{ (desktop_app.fallback.validate_path | default('')) if desktop_app.fallback is defined else '' }}" ]; then
       if [ -n "{{ (desktop_app.fallback.desired_version | default('')) if desktop_app.fallback is defined else '' }}" ] && [ -n "{{ (desktop_app.fallback.version_file | default('')) if desktop_app.fallback is defined else '' }}" ]; then
         current_version="$(jq -r '.{{ (desktop_app.fallback.version_json_key | default('version')) if desktop_app.fallback is defined else 'version' }}' "{{ (desktop_app.fallback.version_file | default('')) if desktop_app.fallback is defined else '' }}" 2>/dev/null || true)"
