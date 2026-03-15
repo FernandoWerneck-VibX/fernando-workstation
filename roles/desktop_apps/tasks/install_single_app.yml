@@ -66,33 +66,17 @@
             state: directory
             mode: "0755"
 
-        - name: Criar arquivo temporario para chave do repo apt
+        - name: Baixar e converter chave apt para formato keyring
           when:
             - desktop_app.fallback.apt_key_url is defined
             - desktop_app.fallback.apt_key_dearmor | default(false) | bool
-          tempfile:
-            state: file
-            suffix: aptkey
-          register: apt_key_tmp
-
-        - name: Baixar chave do repo apt para conversao
-          when:
-            - desktop_app.fallback.apt_key_url is defined
-            - desktop_app.fallback.apt_key_dearmor | default(false) | bool
-          get_url:
-            url: "{{ desktop_app.fallback.apt_key_url }}"
-            dest: "{{ apt_key_tmp.path }}"
-            mode: "0644"
-
-        - name: Converter chave apt para formato keyring (dearmor)
-          when:
-            - desktop_app.fallback.apt_key_url is defined
-            - desktop_app.fallback.apt_key_dearmor | default(false) | bool
-          command: >
+          shell: >
+            set -euo pipefail &&
+            curl -fsSL "{{ desktop_app.fallback.apt_key_url }}" |
             gpg --batch --dearmor --yes
-            --output {{ desktop_app.fallback.apt_key_dest | default('/etc/apt/keyrings/' ~ (desktop_app.id | replace('.', '-')) ~ '.gpg') }}
-            {{ apt_key_tmp.path }}
-          changed_when: true
+            --output "{{ desktop_app.fallback.apt_key_dest | default('/etc/apt/keyrings/' ~ (desktop_app.id | replace('.', '-')) ~ '.gpg') }}"
+          args:
+            executable: /bin/bash
 
         - name: Baixar chave apt diretamente para keyring
           when:
@@ -108,15 +92,6 @@
           file:
             path: "{{ desktop_app.fallback.apt_key_dest | default('/etc/apt/keyrings/' ~ (desktop_app.id | replace('.', '-')) ~ '.gpg') }}"
             mode: "0644"
-
-        - name: Limpar temporario da chave apt
-          when:
-            - desktop_app.fallback.apt_key_url is defined
-            - apt_key_tmp is defined
-            - apt_key_tmp.path is defined
-          file:
-            path: "{{ apt_key_tmp.path }}"
-            state: absent
 
         - name: Remover sources apt legados
           when: desktop_app.fallback.apt_source_legacy_paths is defined
