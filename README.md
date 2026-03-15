@@ -1,156 +1,222 @@
-# 🧰 Fernando Workstation — Provisionamento Profissional para Linux Mint (Cinnamon) com Ansible
+# Fernando Workstation
 
-Este repositório contém um conjunto completo de **playbooks Ansible**, **roles modulares** e **scripts de automação**
-para configurar rapidamente uma estação de trabalho Linux Mint totalmente preparada para desenvolvimento moderno.
+Provisionamento de workstation para Linux Mint 22.x (Cinnamon) com Ansible.
 
-Compatível com **Linux Mint 22.3 (Cinnamon)**, baseado em Ubuntu 24.04 LTS.
-O projeto mantém compatibilidade com a família Mint 22.x e aplica ajustes de desktop via `gsettings` (Cinnamon/GNOME) quando disponível.
+Objetivo: pegar uma maquina nova e sair com sistema, shell, ferramentas de desenvolvimento, apps desktop e servicos opcionais prontos, com suporte a perfis pessoal e colaborador.
 
-A proposta principal é simples:
+## Escopo
 
-> **Ligar uma máquina nova → rodar o bootstrap → sair com tudo configurado, idêntico em todas as máquinas.**
+- Linux Mint 22.x baseado em Ubuntu 24.04
+- Execucao local via Ansible
+- Perfis prontos em `profiles/`
+- Roles separadas para sistema, shell, dev tools, DevOps, apps desktop, projetos e integracoes opcionais
 
----
+## O que o projeto instala
 
-# 🚀 Principais Recursos
+### Sistema base
 
-- **Sistema Operacional Otimizado**
-  - Atualizações automatizadas
-  - Remoção de apps desnecessários na etapa final do provisionamento
-  - Snap desativado (`snapd` removido e bloqueado)
-  - Flatpak/Flathub como padrão
-  - Codecs multimídia instalados (`mint-meta-codecs`)
-  - Sysctl e ZRAM otimizados (`vm.swappiness=5`)
-  - `fstrim.timer` e `irqbalance` habilitados
-  - `tlp` habilitado apenas em notebooks
-  - `tlp-pd` instalado quando disponível no repositório apt
-  - `power-profiles-daemon` removido apenas quando o notebook passa a usar TLP
-  - Extensão `gTile` instalada a partir do Cinnamon Spices
-  - Cinnamon priorizado em vez de integrações de GNOME Shell
+- atualizacao do sistema via `apt`
+- pacotes essenciais como `git`, `curl`, `wget`, `vim`, `build-essential`, `htop`, `btop`, `fzf`, `fd`, `ripgrep`, `bat`, `jq`, `gawk`, `copyq`
+- codecs do Linux Mint (`mint-meta-codecs`)
+- `flatpak` com Flathub
+- `snapd` removido e bloqueado
+- `zram`, `irqbalance` e `fstrim.timer`
+- `tlp` apenas em notebooks
+- `tlp-pd` quando disponivel no repositrio
+- `gTile` via Cinnamon Spices
 
-- **Ambiente de Desenvolvimento Completo**
-  - Java (SDKMAN, Maven, Gradle)
-  - Node (NVM, Yarn, PNPM, Vue CLI, Vite)
-  - Python gerenciado por `uv`
-  - `uv` para toolchain Python, versões e ferramentas de projeto
-  - `pre-commit`, `yamllint` e `ansible-lint`
-  - Flutter SDK
+### Shell e produtividade
 
-- **DevOps e Kubernetes**
-  - Docker + Compose
-  - kubectl
-  - k9s
-  - helm
-  - kind
+- Bash modular via `~/.bashrc.d`
+- `bash-git-prompt`
+- `ble.sh`
+- `atuin`
+- `pay-respects`
+- completions e integracoes do Git
+- aliases via `chezmoi/dot_bash_aliases`
 
-- **Shell Produtivo (Bash)**
-  - fzf
-  - fd
-  - ripgrep
-  - bat
-  - atuin
-  - bash-git-prompt
-  - ble.sh (autosuggestions + syntax highlighting)
-  - pay-respects (correção/sugestão de comandos)
-  - Git com autocompletion
-  - carregamento modular via `~/.bashrc.d`
-  - Zsh não é configurado por padrão
+### Desenvolvimento
 
-- **Aplicativos Essenciais**
-  - Chrome
-  - Firefox
-  - Visual Studio Code
-  - IntelliJ IDEA Ultimate (instalação oficial JetBrains)
-  - Sublime Text
-  - Obsidian
-  - Postman
-  - Discord
-  - Ferdium (multi-conta para mensageria)
-  - Kazam (gravação de tela)
-  - Snapshot/Cheese (webcam/foto/vídeo rápido)
-  - SSH Pilot (GUI para múltiplas conexões SSH)
-  - Spotify
-  - Audiotube (YouTube Music)
-  - Celluloid (vídeo)
-  - gThumb (imagens)
-  - CopyQ
-  - btop
-  - Flatpak/Flathub como padrão (fallback .deb/apt/tarball)
+- Java via SDKMAN
+- Node.js via NVM
+- Python via `uv`
+- ferramentas Python via `uv tool install`
+- `pre-commit`, `yamllint`, `ansible-lint`
+- Flutter SDK
 
-- **Google Drive Integrado (Documentos)**
-  - rclone + systemd service
-  - bind automático para `~/docs`
-  - pasta `~/GoogleDrive/ssh` para backup manual de chaves SSH
+### DevOps
 
-- **Sincronização Entre Máquinas (Syncthing)**
-  - serviço `syncthing@usuario` habilitado
-  - pasta padrão sincronizável: `~/Downloads`
-  - pareamento de dispositivos via UI: `http://127.0.0.1:8384`
+- Docker Engine + Compose plugin
+- `kubectl`
+- `helm`
+- `kind`
+- `k9s`
 
-- **Gerenciamento de Dotfiles**
-  - Chezmoi integrado (aplica automaticamente via `chezmoi_repo` ou pasta local `./chezmoi`)
+### Apps desktop
 
-- **Clonagem Automática de Projetos**
-  - Repositórios definidos em `group_vars/all.yml` são clonados em `~/projects`
-  - Estrutura por subpasta suportada (ex.: `~/projects/vib/*` e `~/projects/personal/*`)
+Catalogo atual em [roles/desktop_apps/defaults/main.yml](/home/fernando/projects/vib/personal-workstation/roles/desktop_apps/defaults/main.yml):
 
----
+- Chrome
+- Firefox
+- VS Code
+- IntelliJ IDEA Ultimate
+- Sublime Text
+- Obsidian
+- Postman
+- Discord
+- Spotify
+- Ferdium
+- Snapshot
+- SSH Pilot
+- Audiotube
+- Celluloid
+- gThumb
 
-# 🧭 Como Usar
+Observacoes:
+- o projeto prioriza Flatpak para apps desktop, com fallback nativo quando necessario
+- VS Code usa repositorio oficial da Microsoft
+- IntelliJ IDEA Ultimate usa download oficial da JetBrains
 
-## 🔹 1. Baixe o repositório (ou clone no GitHub)
+### Integracoes opcionais
+
+- Syncthing
+- Google Drive via `rclone`
+- aplicacao de dotfiles via `chezmoi`
+- clonagem automatica de projetos Git
+
+## Perfis
+
+Perfis disponiveis:
+
+- [profiles/personal.yml](/home/fernando/projects/vib/personal-workstation/profiles/personal.yml): mantem Syncthing, Google Drive e clonagem de projetos ativos
+- [profiles/collaborator.yml](/home/fernando/projects/vib/personal-workstation/profiles/collaborator.yml): desativa recursos pessoais
+
+## Como executar
+
+### 1. Clonar o repositorio
 
 ```bash
-git clone git@github.com:FernandoWerneck-VibX/fernando-workstation.git
-cd fernando-workstation
+git clone <repo>
+cd personal-workstation
 ```
 
-## 🔹 2. Ajustes obrigatórios antes da primeira execução
+### 2. Ajustar variaveis obrigatorias
 
-Edite o arquivo `group_vars/all.yml`:
+Revise [group_vars/all.yml](/home/fernando/projects/vib/personal-workstation/group_vars/all.yml):
 
-- `git_user_name` e `git_user_email` (obrigatório preencher)
-- `chezmoi_repo` (opcional, se quiser aplicar dotfiles de um repositório remoto)
-- `projects_repos` (já vem com exemplos reais e clonagem automática habilitada)
+- `git_user_name`
+- `git_user_email`
+- `chezmoi_repo` se quiser usar um repo remoto de dotfiles
+- `projects_repos` se quiser mudar os repositorios clonados
 
-`dev_user` e `dev_home` são resolvidos automaticamente a partir do usuário do SO que executa o `ansible-playbook`.
+`dev_user` e `dev_home` sao resolvidos automaticamente a partir do usuario que executa o playbook.
 
-Se usar repositórios Git privados (`git@github.com:...`), garanta que sua chave SSH está configurada no GitHub antes de rodar o playbook.
-
-Ajuste `inventory.ini` apenas se precisar de algo específico.
-Por padrão, o projeto usa conexão local e detecta automaticamente o usuário do SO que executa o `ansible-playbook`.
-
-```ini
-[local]
-localhost ansible_connection=local
-```
-
-## 🔹 3. Execute o bootstrap
+### 3. Rodar o bootstrap
 
 ```bash
 chmod +x bootstrap.sh
 ./bootstrap.sh
 ```
 
-O `bootstrap.sh` pergunta interativamente qual perfil usar (`default`, `personal.yml` ou `collaborator.yml`).
-Se preferir sem prompt, passe o perfil por argumento:
+O script:
+
+1. exige execucao com usuario comum
+2. permite escolher um perfil interativamente
+3. instala `ansible` e `git`
+4. roda o playbook principal
+
+Tambem funciona com argumento explicito:
 
 ```bash
 ./bootstrap.sh collaborator.yml
 ```
 
-Execute como usuario comum (nao `root` e sem `sudo` no comando do playbook).
-O provisionamento valida `dev_user` e interrompe se ele resolver para `root`.
+### 4. Rodar direto com Ansible
 
-O script irá:
+```bash
+ansible-playbook -i inventory.ini site.yml --ask-become-pass
+ansible-playbook -i inventory.ini site.yml --ask-become-pass -e @profiles/personal.yml
+ansible-playbook -i inventory.ini site.yml --ask-become-pass -e @profiles/collaborator.yml
+```
 
-1. Instalar Ansible
-2. Instalar Git
-3. Executar o playbook principal
+O inventario local esta em [inventory.ini](/home/fernando/projects/vib/personal-workstation/inventory.ini) e fixa o interpretador em `/usr/bin/python3` para nao depender de `pyenv` ou ferramentas do usuario.
 
-Atualizações do sistema, upgrades e demais mudanças de estado ficam centralizadas no playbook, não no `bootstrap.sh`.
+## Integracoes que exigem passo manual
 
-Se preferir, o repositório também expõe atalhos via `Makefile`:
+### Google Drive
+
+Valido apenas quando `gdrive_enable: true`.
+
+Na primeira maquina:
+
+```bash
+rclone config
+```
+
+Crie um remote chamado `gdrive` e depois rerode o playbook.
+
+O projeto prepara:
+
+- `~/GoogleDrive`
+- bind para `~/docs`
+- `~/GoogleDrive/ssh` para backup manual de chaves SSH
+
+### Syncthing
+
+Valido apenas quando `syncthing_enable: true`.
+
+Depois do provisionamento:
+
+```bash
+sudo systemctl status "syncthing@$(id -un)"
+xdg-open http://127.0.0.1:8384
+```
+
+O playbook habilita o servico e prepara as pastas, mas o pareamento entre maquinas e a configuracao de folders continuam manuais.
+
+### Docker
+
+Depois do primeiro provisionamento, faca logout/login para aplicar o grupo `docker` ao usuario.
+
+## Dotfiles
+
+O role de shell instala `chezmoi` e pode aplicar dotfiles de duas formas:
+
+- repositorio remoto via `chezmoi_repo`
+- fonte local neste projeto, em `./chezmoi`
+
+No estado atual, o conteudo versionado em `chezmoi/` e aplicado automaticamente e composto apenas por aliases Bash.
+
+## Personalizacao
+
+Pontos mais comuns de personalizacao:
+
+- versoes de linguagens em [group_vars/all.yml](/home/fernando/projects/vib/personal-workstation/group_vars/all.yml)
+- apps desktop em [roles/desktop_apps/defaults/main.yml](/home/fernando/projects/vib/personal-workstation/roles/desktop_apps/defaults/main.yml)
+- apps removidos ao final em [roles/cleanup_apps/defaults/main.yml](/home/fernando/projects/vib/personal-workstation/roles/cleanup_apps/defaults/main.yml)
+- configuracao de shell em [roles/shell/tasks/main.yml](/home/fernando/projects/vib/personal-workstation/roles/shell/tasks/main.yml) e [roles/shell_env/tasks/main.yml](/home/fernando/projects/vib/personal-workstation/roles/shell_env/tasks/main.yml)
+- projetos clonados em [group_vars/all.yml](/home/fernando/projects/vib/personal-workstation/group_vars/all.yml)
+
+Exemplo de ajuste de perfil:
+
+```yaml
+syncthing_enable: false
+gdrive_enable: false
+projects_enable: false
+projects_repos: []
+```
+
+Exemplo de ajuste de versoes:
+
+```yaml
+python_version: "3.12.2"
+node_version: "lts/*"
+java_version: "24-open"
+```
+
+## Validacao
+
+Atalhos disponiveis no [Makefile](/home/fernando/projects/vib/personal-workstation/Makefile):
 
 ```bash
 make install
@@ -159,300 +225,66 @@ make check
 make lint
 ```
 
-## 🔹 4. Use perfis por tipo de máquina (pessoal x colaborador)
+Observacao:
+- `make check` exige `ansible-playbook` instalado no ambiente
+- `make lint` exige `pre-commit` instalado
 
-Este projeto agora inclui perfis prontos em `profiles/`:
+## Troubleshooting rapido
 
-- `profiles/personal.yml` (mantém tudo ativo)
-- `profiles/collaborator.yml` (desativa Google Drive, Syncthing e clonagem automática de projetos)
-
-Exemplo para notebook de colaborador:
-
-```bash
-ansible-playbook -i inventory.ini site.yml --ask-become-pass -e @profiles/collaborator.yml
-```
-
-Exemplo para sua máquina pessoal:
-
-```bash
-ansible-playbook -i inventory.ini site.yml --ask-become-pass -e @profiles/personal.yml
-```
-
----
-
-# ⚙️ Primeira Execução com Google Drive
-
-Use esta etapa apenas quando `gdrive_enable: true` (ex.: perfil `personal`).
-
-A integração com o Google Drive usa **rclone**.
-
-Na primeira máquina, execute:
-
-```bash
-rclone config
-```
-
-Siga os passos na tela e configure um remote chamado `gdrive`.
-
-Depois, execute o playbook novamente:
-
-```bash
-ansible-playbook -i inventory.ini site.yml --ask-become-pass
-```
-
-Isso ativará:
-
-- `~/GoogleDrive`
-- Bind para `~/docs`
-- Pasta `~/GoogleDrive/ssh` para backup manual do conteúdo de `~/.ssh`
-
-Obs: o serviço só inicia se `~/.config/rclone/rclone.conf` existir.
-
----
-
-# 🔄 Primeira Execução com Syncthing
-
-Use esta etapa apenas quando `syncthing_enable: true` (ex.: perfil `personal`).
-
-Após rodar o playbook, o serviço do Syncthing ficará ativo:
-
-```bash
-sudo systemctl status "syncthing@$(id -un)"
-```
-
-Abra a interface web local para parear os dispositivos:
-
-```bash
-xdg-open http://127.0.0.1:8384
-```
-
-Obs: o playbook prepara o serviço e as pastas, mas o pareamento de dispositivos e IDs de pasta é feito uma vez na UI.
-
----
-
-# 🧾 Onboarding Automático
-
-Ao final do playbook, é gerado um checklist com resumo do ambiente e próximos passos:
+### Ver status do onboarding gerado
 
 ```bash
 cat ~/WORKSTATION_ONBOARDING.md
 ```
 
-O arquivo inclui:
-
-- O que foi provisionado
-- O que ainda precisa de configuração manual
-- Comandos de validação rápida
-
-## O que ainda é manual (resumo rápido)
-
-- Configurar `rclone config` (Google Drive) na primeira máquina, se `gdrive_enable: true`
-- Parear dispositivos/pastas no Syncthing (`http://127.0.0.1:8384`), se `syncthing_enable: true`
-- Fazer logout/login para aplicar grupo `docker`
-- Configurar contas dos apps (Chrome, Discord, Ferdium, Spotify etc.)
-- Se usar Git privado: configurar chave SSH no provedor
-- Para dotfiles automáticos: definir `chezmoi_repo` ou criar uma pasta local `./chezmoi` neste projeto
-
----
-
-# 🛠 Personalização
-
-Toda a personalização do ambiente fica em:
-
-```
-group_vars/all.yml
-```
-
-### Exemplos de configurações disponíveis:
-
-```yaml
-# Detectado automaticamente a partir do usuario que executa o ansible-playbook
-dev_user: "{{ lookup('env', 'SUDO_USER') | default(lookup('env', 'USER'), true) }}"
-dev_home: "/home/{{ dev_user }}"
-
-git_user_name: "SEU_NOME"
-git_user_email: "seu-email@exemplo.com"
-
-java_version: "24-open"
-node_version: "lts/*"
-python_version: "3.12.2"
-flutter_version: "latest"
-flutter_channel: "stable"
-kubectl_version: "latest"
-helm_version: "latest"
-k9s_version: "latest"
-kind_version: "latest"
-syncthing_enable: true
-gdrive_enable: true
-projects_enable: true
-syncthing_folders:
-  - "{{ dev_home }}/Downloads"
-cinnamon_enable_gtile: true
-common_tlp_notebook_only: true
-common_enable_tlp_pd: true
-shell_env_dir: "{{ dev_home }}/.bashrc.d"
-
-chezmoi_repo: ""
-
-projects_repos:
-  - name: telegram-bot
-    path: vib/telegram-bot
-    url: https://github.com/Vibxtech/telegram-bot.git
-  - name: workstation-monitor
-    path: vib/workstation-monitor
-    url: https://github.com/Vibxtech/workstation-monitor.git
-  - name: market-analysis-data
-    path: personal/market-analysis-data
-    url: git@github.com:FernandoWerneck/market-analysis-data.git
-
-desktop_apps_catalog:
-  - id: "intellij-idea-ultimate"
-  - id: "md.obsidian.Obsidian"
-  - id: "com.getpostman.Postman"
-  - id: "org.ferdium.Ferdium"
-  - id: "org.gnome.Snapshot"
-  - id: "io.github.mfat.sshpilot"
-  - id: "com.spotify.Client"
-  - id: "org.kde.audiotube"
-```
-
-No estado atual do projeto:
-
-- `chezmoi_repo` vem vazio por padrão, mas você pode aplicar dotfiles com:
-  - repositório remoto (`chezmoi_repo`)
-  - fonte local no projeto (`./chezmoi`)
-- `projects_repos` já vem preenchido e os repositórios são clonados em `~/projects` mantendo subpastas (`vib/*` e `personal/*`)
-- `gTile` é instalado a partir do repositório oficial `linuxmint/cinnamon-spices-extensions`
-- `tlp` só é aplicado automaticamente quando a máquina é detectada como notebook
-- `tlp-pd` é instalado apenas se existir nos repositórios apt disponíveis
-- integrações do Bash ficam em arquivos separados dentro de `~/.bashrc.d`
-- `pre-commit`, `yamllint` e `ansible-lint` são instalados via `uv tool install`
-- o Google Drive cria `docs` e `ssh` na raiz montada; apenas `docs` é bindado localmente
-
-Opcional: caso queira forçar outro release Ubuntu para o repositório Docker, defina:
-
-```yaml
-docker_apt_release: "noble"
-```
-
-Você pode customizar:
-
-- Versões de linguagens
-- Repositório de dotfiles
-- Repositórios a serem clonados
-- Nome do usuário
-- Estrutura de pastas
-- Apps a instalar nas roles
-- Fallbacks por app (apt, deb ou tarball)
-
-Opcional: para Postman via `.deb`, configure `postman_deb_url` e `postman_deb_package_name` em `group_vars/all.yml`.
-
-Exemplo de fallback por app:
-
-```yaml
-desktop_apps_catalog:
-  - id: "com.getpostman.Postman"
-    fallback:
-      tarball: "https://dl.pstmn.io/download/latest/linux64"
-      install_dir: "/opt"
-      validate_path: "/opt/Postman/Postman"
-```
-
----
-
-# 🧪 Testes e Troubleshooting
-
-## 🔹 Testar se o Google Drive montou corretamente
+### Verificar Docker
 
 ```bash
-mount | grep GoogleDrive
+docker version
+docker compose version
 ```
 
-## 🔹 Reiniciar o serviço do Google Drive
+### Verificar apps desktop
 
 ```bash
-sudo systemctl restart rclone-gdrive
+flatpak list
+command -v code
+command -v intellij-idea-ultimate
 ```
 
-## 🔹 Testar Syncthing
+### Verificar shell
 
 ```bash
-sudo systemctl status "syncthing@$(id -un)"
-```
-
-## 🔹 Testar Docker
-
-```bash
-docker run hello-world
-```
-
-Se der erro de permissao, faça logout/login para aplicar o grupo `docker`.
-
-## 🔹 Testar se os repositórios foram clonados
-
-```bash
-ls ~/projects
-```
-
-## 🔹 Testar configurações do Bash
-
-```bash
-echo $PROMPT_COMMAND
-type __fzf_history
 ls ~/.bashrc.d
+type __fzf_history
 ```
 
-## 🔹 Rodar validações do repositório
-
-```bash
-make check
-make lint
-```
-
-## 🔹 Ver logs de erros do Ansible
+### Ver logs detalhados do provisionamento
 
 ```bash
 ./bootstrap.sh 2>&1 | tee bootstrap.log
-```
-
-ou
-
-```bash
 ansible-playbook -i inventory.ini site.yml --ask-become-pass -vv 2>&1 | tee ansible-run.log
 ```
 
----
+## Estrutura do projeto
 
-# 🎯 Motivação do Projeto
+- [site.yml](/home/fernando/projects/vib/personal-workstation/site.yml): playbook principal
+- [group_vars/all.yml](/home/fernando/projects/vib/personal-workstation/group_vars/all.yml): variaveis globais
+- `profiles/`: overrides por tipo de maquina
+- `roles/common`: base do sistema
+- `roles/cinnamon`: ajustes de desktop Cinnamon
+- `roles/shell_env` e `roles/shell`: shell, prompt e integracoes
+- `roles/dev_tools`: linguagens e tooling de desenvolvimento
+- `roles/devops`: Docker e ferramentas de infraestrutura
+- `roles/desktop_apps`: catalogo de apps e fallbacks
+- `roles/projects`: clonagem de repositorios
+- `roles/syncthing`: sincronizacao entre maquinas
+- `roles/gdrive`: montagem do Google Drive com `rclone`
+- `roles/cleanup_apps`: remocao de apps preinstalados e limpeza final
+- `roles/onboarding`: gera `~/WORKSTATION_ONBOARDING.md`
 
-Este projeto nasceu da necessidade de:
+## Observacoes finais
 
-- Eliminar horas de configuração manual após formatar uma máquina  
-- Garantir que computadores diferentes tenham exatamente o **mesmo ambiente**  
-- Acelerar o onboarding em novas máquinas ou ambientes de trabalho  
-- Padronizar ferramentas, versões e comportamento do sistema  
-- Aumentar produtividade e evitar discrepâncias entre setups pessoais/profissionais  
-- Criar uma workstation robusta, moderna e confiável  
-
-A configuração manual pode levar **3 a 5 horas** — aqui, tudo leva apenas **10 minutos**.
-
----
-
-# 📄 Licença
-
-**MIT License**
-
-Você pode:
-
-- Usar
-- Modificar
-- Adaptar
-- Distribuir
-- Incorporar em projetos pessoais ou corporativos
-
-Tudo livremente.
-
-```
-Copyright 2025  
-Permissão é concedida...
-```
+- O projeto pode conter exemplos reais em `projects_repos`; revise isso antes de publicar o repositorio.
+- Alguns componentes dependem de rede externa e repositorios de terceiros.
+- O provisionamento tenta limpar legados comuns do proprio projeto, mas uma maquina muito alterada pode exigir ajuste pontual.
