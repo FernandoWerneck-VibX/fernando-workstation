@@ -65,5 +65,9 @@ else
   PROFILE_ARG=()
 fi
 
+sudo rm -f \
+  /etc/apt/sources.list.d/fallback-com-visualstudio-code.list \
+  /etc/apt/sources.list.d/vscode.list \
+  /etc/apt/sources.list.d/vscode.sources
 sudo apt update && sudo apt install -y ansible git
 ansible-playbook -i inventory.ini site.yml --ask-become-pass "${PROFILE_ARG[@]}"

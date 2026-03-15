@@ -30,6 +30,12 @@
         )
       }}
 
+- name: Remover sources APT legados que podem quebrar o bootstrap
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ common_apt_preclean_paths }}"
+
 - name: Atualizar sistema
   apt:
     update_cache: yes
