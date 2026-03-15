@@ -16,6 +16,45 @@
     state: directory
     mode: "0755"
 
+- name: Verificar se IntelliJ IDEA Ultimate oficial sera instalada
+  set_fact:
+    desktop_apps_install_intellij_official: "{{ (flatpak_apps | selectattr('id', 'equalto', 'intellij-idea-ultimate') | list | length) > 0 }}"
+
+- name: Consultar release oficial mais recente do IntelliJ IDEA Ultimate
+  uri:
+    url: https://data.services.jetbrains.com/products/releases?code=IIU&latest=true&type=release
+    return_content: yes
+    headers:
+      User-Agent: ansible
+  register: intellij_release_latest
+  changed_when: false
+  when: desktop_apps_install_intellij_official
+
+- name: Falhar se nao conseguir consultar release oficial do IntelliJ IDEA Ultimate
+  fail:
+    msg: "Falha ao consultar release oficial do IntelliJ IDEA Ultimate na JetBrains. Verifique rede/proxy."
+  when:
+    - desktop_apps_install_intellij_official
+    - intellij_release_latest.status is not defined or intellij_release_latest.status != 200
+
+- name: Definir download oficial do IntelliJ IDEA Ultimate
+  set_fact:
+    intellij_ultimate_release: "{{ intellij_release_latest.json.IIU[0] }}"
+    intellij_ultimate_tarball_url: >-
+      {{
+        intellij_release_latest.json.IIU[0].downloads.linux.link
+        if ansible_architecture == 'x86_64'
+        else intellij_release_latest.json.IIU[0].downloads.linuxARM64.link
+      }}
+    intellij_ultimate_checksum_url: >-
+      {{
+        intellij_release_latest.json.IIU[0].downloads.linux.checksumLink
+        if ansible_architecture == 'x86_64'
+        else intellij_release_latest.json.IIU[0].downloads.linuxARM64.checksumLink
+      }}
+    intellij_ultimate_version: "{{ intellij_release_latest.json.IIU[0].version }}"
+  when: desktop_apps_install_intellij_official
+
 - name: Instalar apps desktop via Flatpak com fallback
   include_tasks: install_single_app.yml
   loop: "{{ flatpak_apps }}"
@@ -29,7 +68,14 @@
     if [ -n "{{ (item.fallback.apt | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.apt | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
     if [ -n "{{ (item.fallback.apt_package | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.apt_package | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
     if [ -n "{{ (item.fallback.package_name | default('')) if item.fallback is defined else '' }}" ]; then dpkg -s "{{ (item.fallback.package_name | default('')) if item.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
-    if [ -n "{{ (item.fallback.validate_path | default('')) if item.fallback is defined else '' }}" ] && [ -e "{{ (item.fallback.validate_path | default('')) if item.fallback is defined else '' }}" ]; then exit 0; fi
+    if [ -n "{{ (item.fallback.validate_path | default('')) if item.fallback is defined else '' }}" ] && [ -e "{{ (item.fallback.validate_path | default('')) if item.fallback is defined else '' }}" ]; then
+      if [ -n "{{ (item.fallback.desired_version | default('')) if item.fallback is defined else '' }}" ] && [ -n "{{ (item.fallback.version_file | default('')) if item.fallback is defined else '' }}" ]; then
+        current_version="$(jq -r '.{{ (item.fallback.version_json_key | default('version')) if item.fallback is defined else 'version' }}' "{{ (item.fallback.version_file | default('')) if item.fallback is defined else '' }}" 2>/dev/null || true)"
+        [ "$current_version" = "{{ (item.fallback.desired_version | default('')) if item.fallback is defined else '' }}" ] && exit 0
+      else
+        exit 0
+      fi
+    fi
     exit 1
   args:
     executable: /bin/bash

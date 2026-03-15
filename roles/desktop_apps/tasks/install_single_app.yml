@@ -1,31 +1,58 @@
 ---
+- name: Verificar app fallback instalada
+  shell: |
+    if [ -n "{{ (desktop_app.fallback.apt | default('')) if desktop_app.fallback is defined else '' }}" ]; then dpkg -s "{{ (desktop_app.fallback.apt | default('')) if desktop_app.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
+    if [ -n "{{ (desktop_app.fallback.apt_package | default('')) if desktop_app.fallback is defined else '' }}" ]; then dpkg -s "{{ (desktop_app.fallback.apt_package | default('')) if desktop_app.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
+    if [ -n "{{ (desktop_app.fallback.package_name | default('')) if desktop_app.fallback is defined else '' }}" ]; then dpkg -s "{{ (desktop_app.fallback.package_name | default('')) if desktop_app.fallback is defined else '' }}" >/dev/null 2>&1 && exit 0; fi
+    if [ -n "{{ (desktop_app.fallback.validate_path | default('')) if desktop_app.fallback is defined else '' }}" ] && [ -e "{{ (desktop_app.fallback.validate_path | default('')) if desktop_app.fallback is defined else '' }}" ]; then
+      if [ -n "{{ (desktop_app.fallback.desired_version | default('')) if desktop_app.fallback is defined else '' }}" ] && [ -n "{{ (desktop_app.fallback.version_file | default('')) if desktop_app.fallback is defined else '' }}" ]; then
+        current_version="$(jq -r '.{{ (desktop_app.fallback.version_json_key | default('version')) if desktop_app.fallback is defined else 'version' }}' "{{ (desktop_app.fallback.version_file | default('')) if desktop_app.fallback is defined else '' }}" 2>/dev/null || true)"
+        [ "$current_version" = "{{ (desktop_app.fallback.desired_version | default('')) if desktop_app.fallback is defined else '' }}" ] && exit 0
+      else
+        exit 0
+      fi
+    fi
+    exit 1
+  args:
+    executable: /bin/bash
+  register: desktop_app_fallback_installed
+  failed_when: false
+  changed_when: false
+
 - name: Verificar app Flatpak instalada
   command: flatpak info --system {{ desktop_app.id }}
   register: flatpak_info
   failed_when: false
   changed_when: false
+  when: desktop_app.flatpak_preferred | default(true) | bool
 
 - name: Instalar app Flatpak
   command: flatpak install -y --system {{ flatpak_remote_name }} {{ desktop_app.id }}
   register: flatpak_install
   failed_when: false
-  when: flatpak_info.rc != 0
+  when:
+    - desktop_app.flatpak_preferred | default(true) | bool
+    - desktop_app_fallback_installed.rc != 0
+    - flatpak_info.rc != 0
 
 - name: Fallback para instalacao do app
   when:
-    - flatpak_info.rc != 0
-    - flatpak_install.rc is defined
-    - flatpak_install.rc != 0
+    - desktop_app.fallback is defined
+    - desktop_app_fallback_installed.rc != 0
+    - not (desktop_app.flatpak_preferred | default(true) | bool and flatpak_info.rc == 0)
+    - not (desktop_app.flatpak_preferred | default(true) | bool and flatpak_install.rc is defined and flatpak_install.rc == 0)
   block:
-    - name: Avisar sobre falha do Flatpak
+    - name: Avisar sobre instalacao nativa
       debug:
         msg: >-
-          Falha ao instalar {{ desktop_app.id }} via Flatpak (rc={{ flatpak_install.rc }}).
-          stderr='{{ flatpak_install.stderr | default('') | trim }}'
-          Tentando fallback.
+          {{
+            'Instalando ' ~ desktop_app.id ~ ' diretamente via fallback vendor/native.'
+            if not (desktop_app.flatpak_preferred | default(true) | bool)
+            else
+            'Falha ao instalar ' ~ desktop_app.id ~ ' via Flatpak (rc=' ~ (flatpak_install.rc | string) ~ "). stderr='" ~ (flatpak_install.stderr | default('') | trim) ~ "'. Tentando fallback."
+          }}
 
-    - name: Fallback para apt/deb
-      when: desktop_app.fallback is defined
+    - name: Fallback para apt/deb/tarball
       block:
         - name: Criar arquivo temporario para chave do repo apt
           when: desktop_app.fallback.apt_key_url is defined
@@ -105,33 +132,127 @@
             path: "{{ desktop_app.fallback.validate_path }}"
           register: tarball_stat
 
+        - name: Coletar versao instalada via arquivo de metadata
+          when:
+            - desktop_app.fallback.tarball is defined
+            - desktop_app.fallback.version_file is defined
+            - tarball_stat.stat.exists
+          command: jq -r ".{{ desktop_app.fallback.version_json_key | default('version') }}" "{{ desktop_app.fallback.version_file }}"
+          register: tarball_version
+          changed_when: false
+          failed_when: false
+
+        - name: Definir necessidade de reinstalar tarball
+          set_fact:
+            tarball_needs_install: >-
+              {{
+                (not (tarball_stat.stat.exists | default(false)))
+                or
+                (
+                  desktop_app.fallback.desired_version is defined
+                  and (tarball_version.stdout | default('') | trim) != (desktop_app.fallback.desired_version | string)
+                )
+              }}
+          when: desktop_app.fallback.tarball is defined
+
         - name: Garantir diretorio de instalacao do tarball
-          when: desktop_app.fallback.tarball is defined and not tarball_stat.stat.exists
+          when: desktop_app.fallback.tarball is defined and tarball_needs_install | default(false)
           file:
             path: "{{ desktop_app.fallback.install_dir }}"
             state: directory
             mode: "0755"
 
+        - name: Remover diretorio anterior do tarball para reinstalacao
+          when:
+            - desktop_app.fallback.tarball is defined
+            - tarball_needs_install | default(false)
+            - desktop_app.fallback.installed_dir is defined
+          file:
+            path: "{{ desktop_app.fallback.installed_dir }}"
+            state: absent
+
         - name: Criar diretoria temporaria para tarball
-          when: desktop_app.fallback.tarball is defined and not tarball_stat.stat.exists
+          when: desktop_app.fallback.tarball is defined and tarball_needs_install | default(false)
           tempfile:
             state: directory
             suffix: app
           register: tarball_tmp
 
         - name: Baixar tarball
-          when: desktop_app.fallback.tarball is defined and not tarball_stat.stat.exists
+          when: desktop_app.fallback.tarball is defined and tarball_needs_install | default(false)
           get_url:
             url: "{{ desktop_app.fallback.tarball }}"
             dest: "{{ tarball_tmp.path }}/app.tar.gz"
             mode: "0644"
+            checksum: "{{ desktop_app.fallback.tarball_checksum | default(omit) }}"
+
+        - name: Baixar checksum do tarball
+          when:
+            - desktop_app.fallback.tarball is defined
+            - tarball_needs_install | default(false)
+            - desktop_app.fallback.tarball_checksum_url is defined
+          uri:
+            url: "{{ desktop_app.fallback.tarball_checksum_url }}"
+            return_content: yes
+          register: tarball_checksum
+
+        - name: Definir checksum do tarball
+          when:
+            - desktop_app.fallback.tarball is defined
+            - tarball_needs_install | default(false)
+            - desktop_app.fallback.tarball_checksum_url is defined
+          set_fact:
+            desktop_app_fallback_tarball_checksum: "sha256:{{ tarball_checksum.content.split()[0] }}"
+
+        - name: Rebaixar tarball com checksum validado
+          when:
+            - desktop_app.fallback.tarball is defined
+            - tarball_needs_install | default(false)
+            - desktop_app.fallback.tarball_checksum_url is defined
+          get_url:
+            url: "{{ desktop_app.fallback.tarball }}"
+            dest: "{{ tarball_tmp.path }}/app.tar.gz"
+            mode: "0644"
+            checksum: "{{ desktop_app_fallback_tarball_checksum }}"
 
         - name: Extrair tarball
-          when: desktop_app.fallback.tarball is defined and not tarball_stat.stat.exists
+          when:
+            - desktop_app.fallback.tarball is defined
+            - tarball_needs_install | default(false)
+            - desktop_app.fallback.installed_dir is not defined
           unarchive:
             src: "{{ tarball_tmp.path }}/app.tar.gz"
             dest: "{{ desktop_app.fallback.install_dir }}"
             remote_src: yes
+
+        - name: Extrair tarball em temporario controlado
+          when:
+            - desktop_app.fallback.tarball is defined
+            - tarball_needs_install | default(false)
+            - desktop_app.fallback.installed_dir is defined
+          unarchive:
+            src: "{{ tarball_tmp.path }}/app.tar.gz"
+            dest: "{{ tarball_tmp.path }}"
+            remote_src: yes
+
+        - name: Encontrar diretório extraido do tarball
+          when:
+            - desktop_app.fallback.tarball is defined
+            - tarball_needs_install | default(false)
+            - desktop_app.fallback.installed_dir is defined
+          find:
+            paths: "{{ tarball_tmp.path }}"
+            file_type: directory
+            recurse: false
+          register: tarball_extracted_dirs
+
+        - name: Mover diretorio extraido para destino final
+          when:
+            - desktop_app.fallback.tarball is defined
+            - tarball_needs_install | default(false)
+            - desktop_app.fallback.installed_dir is defined
+            - tarball_extracted_dirs.matched | int > 0
+          command: mv "{{ (tarball_extracted_dirs.files | map(attribute='path') | list | first) }}" "{{ desktop_app.fallback.installed_dir }}"
 
         - name: Garantir link do binario
           when: desktop_app.fallback.bin_path is defined and desktop_app.fallback.bin_target is defined
@@ -163,7 +284,12 @@
         - fail:
             msg: "Falha ao instalar fallback de {{ desktop_app.id }}. Verifique rede/proxy, chaves GPG e repositorios apt/deb."
 
-    - name: Falhar sem fallback
-      when: desktop_app.fallback is not defined
-      fail:
-        msg: "Falha ao instalar {{ desktop_app.id }} via Flatpak e nenhum fallback foi definido. Verifique sua conexao com a Internet/Flathub."
+- name: Falhar sem fallback quando o Flatpak nao for suficiente
+  when:
+    - desktop_app.fallback is not defined
+    - desktop_app.flatpak_preferred | default(true) | bool
+    - flatpak_info.rc != 0
+    - flatpak_install.rc is defined
+    - flatpak_install.rc != 0
+  fail:
+    msg: "Falha ao instalar {{ desktop_app.id }} via Flatpak e nenhum fallback foi definido. Verifique sua conexao com a Internet/Flathub."

@@ -16,12 +16,29 @@ flatpak_apps:
     fallback:
       apt: "gthumb"
   - id: "com.visualstudio.code"
+    flatpak_preferred: false
     fallback:
       apt_key_url: "https://packages.microsoft.com/keys/microsoft.asc"
       apt_key_dest: "/etc/apt/keyrings/microsoft.gpg"
       apt_repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
       apt_package: "code"
-  - id: "com.jetbrains.IntelliJ-IDEA-Ultimate"
+  - id: "intellij-idea-ultimate"
+    flatpak_preferred: false
+    fallback:
+      tarball: "{{ intellij_ultimate_tarball_url }}"
+      tarball_checksum_url: "{{ intellij_ultimate_checksum_url }}"
+      desired_version: "{{ intellij_ultimate_version }}"
+      install_dir: "/opt"
+      installed_dir: "/opt/intellij-idea-ultimate"
+      validate_path: "/opt/intellij-idea-ultimate/bin/idea"
+      version_file: "/opt/intellij-idea-ultimate/product-info.json"
+      version_json_key: "version"
+      bin_path: "/usr/local/bin/intellij-idea-ultimate"
+      bin_target: "/opt/intellij-idea-ultimate/bin/idea"
+      desktop_entry: "/usr/share/applications/intellij-idea-ultimate.desktop"
+      desktop_name: "IntelliJ IDEA Ultimate"
+      desktop_exec: "/opt/intellij-idea-ultimate/bin/idea"
+      desktop_icon: "/opt/intellij-idea-ultimate/bin/idea.svg"
   - id: "com.sublimetext.three"
     fallback:
       apt_key_url: "https://download.sublimetext.com/sublimehq-pub.gpg"

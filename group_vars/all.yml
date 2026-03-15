@@ -26,67 +26,6 @@ flatpak_remote_name: "flathub"
 flatpak_remote_url: "https://flathub.org/repo/flathub.flatpakrepo"
 postman_deb_url: ""
 postman_deb_package_name: ""
-flatpak_apps:
-  - id: "com.google.Chrome"
-    fallback:
-      deb: "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
-      package_name: "google-chrome-stable"
-  - id: "org.mozilla.firefox"
-  - id: "io.github.celluloid_player.Celluloid"
-    fallback:
-      apt: "celluloid"
-  - id: "org.gnome.gThumb"
-    fallback:
-      apt: "gthumb"
-  - id: "com.visualstudio.code"
-    fallback:
-      apt_key_url: "https://packages.microsoft.com/keys/microsoft.asc"
-      apt_key_dest: "/etc/apt/keyrings/microsoft.gpg"
-      apt_repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
-      apt_package: "code"
-  - id: "com.jetbrains.IntelliJ-IDEA-Ultimate"
-  - id: "com.sublimetext.three"
-    fallback:
-      apt_key_url: "https://download.sublimetext.com/sublimehq-pub.gpg"
-      apt_key_dest: "/etc/apt/keyrings/sublimehq.gpg"
-      apt_repo: "deb [signed-by=/etc/apt/keyrings/sublimehq.gpg] https://download.sublimetext.com/ apt/stable/"
-      apt_package: "sublime-text"
-  - id: "md.obsidian.Obsidian"
-    fallback:
-      deb: "https://github.com/obsidianmd/obsidian-releases/releases/latest/download/obsidian_amd64.deb"
-      package_name: "obsidian"
-  - id: "com.getpostman.Postman"
-    fallback:
-      deb: "{{ postman_deb_url }}"
-      package_name: "{{ postman_deb_package_name }}"
-      tarball: "https://dl.pstmn.io/download/latest/linux64"
-      install_dir: "/opt"
-      installed_dir: "/opt/Postman"
-      validate_path: "/opt/Postman/Postman"
-      bin_path: "/usr/local/bin/postman"
-      bin_target: "/opt/Postman/Postman"
-      desktop_entry: "/usr/share/applications/postman.desktop"
-      desktop_name: "Postman"
-      desktop_exec: "/opt/Postman/Postman"
-      desktop_icon: "/opt/Postman/app/resources/app/assets/icon.png"
-  - id: "com.discordapp.Discord"
-    fallback:
-      deb: "https://discord.com/api/download?platform=linux&format=deb"
-      package_name: "discord"
-  - id: "com.spotify.Client"
-    fallback:
-      apt_key_url: "https://download.spotify.com/debian/pubkey_0D811D58.gpg"
-      apt_key_dest: "/etc/apt/keyrings/spotify.gpg"
-      apt_repo: "deb [signed-by=/etc/apt/keyrings/spotify.gpg] http://repository.spotify.com stable non-free"
-      apt_package: "spotify-client"
-  - id: "org.ferdium.Ferdium"
-    fallback:
-      apt: "ferdium"
-  - id: "org.gnome.Snapshot"
-    fallback:
-      apt: "cheese"
-  - id: "io.github.mfat.sshpilot"
-  - id: "org.kde.audiotube"
 chezmoi_repo: ""
 apt_cache_valid_time: 3600
 projects_dir: "{{ dev_home }}/projects"

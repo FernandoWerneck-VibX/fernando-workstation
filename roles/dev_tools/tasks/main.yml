@@ -1,7 +1,7 @@
 ---
 - name: Instalar SDKMAN
   become_user: "{{ dev_user }}"
-  shell: curl -s "https://get.sdkman.io" | bash
+  shell: curl -s "https://get.sdkman.io?rcupdate=false" | bash
   args:
     creates: "{{ dev_home }}/.sdkman/bin/sdkman-init.sh"
 
@@ -34,9 +34,11 @@
 
 - name: Instalar NVM
   become_user: "{{ dev_user }}"
-  shell: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+  shell: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/{{ nvm_version }}/install.sh | bash
   args:
     creates: "{{ dev_home }}/.nvm/nvm.sh"
+  environment:
+    PROFILE: /dev/null
 
 - name: Instalar Node/Yarn/PNPM/Vue/Vite
   become_user: "{{ dev_user }}"
@@ -65,22 +67,9 @@
     marker: "# {mark} ANSIBLE MANAGED BLOCK - nvm"
     state: absent
 
-- name: Dependências Pyenv
+- name: Dependencias de Python e Flutter
   apt:
-    name:
-      - python3-venv
-      - make
-      - build-essential
-      - libssl-dev
-      - zlib1g-dev
-      - libbz2-dev
-      - libreadline-dev
-      - libsqlite3-dev
-      - llvm
-      - tk-dev
-      - libffi-dev
-      - liblzma-dev
-      - python3-openssl
+    name: "{{ ['python3-venv', 'python3-dev', 'python3-pip', 'python3-setuptools', 'python3-wheel'] + flutter_linux_packages }}"
 
 - name: Remover pipx para padronizar ferramentas Python com uv
   apt:
@@ -104,41 +93,34 @@
     UV_NO_MODIFY_PATH: "1"
   when: not uv_bin.stat.exists
 
-- name: Instalar Pyenv
-  become_user: "{{ dev_user }}"
-  shell: curl https://pyenv.run | bash
-  args:
-    creates: "{{ dev_home }}/.pyenv/bin/pyenv"
+- name: Remover instalacao legada do Pyenv
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ dev_home }}/.pyenv"
+    - "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/60-pyenv.sh"
 
-- name: Instalar Python via Pyenv
-  become_user: "{{ dev_user }}"
-  shell: |
-    export PYENV_ROOT="{{ dev_home }}/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init -)"
-    pyenv install -s {{ python_version }}
-    pyenv global {{ python_version }}
-  args: {executable: /bin/bash}
-
-- name: Ativar Pyenv no Bash
-  copy:
-    dest: "{{ shell_env_dir | default(dev_home ~ '/.bashrc.d') }}/60-pyenv.sh"
-    owner: "{{ dev_user }}"
-    group: "{{ dev_user }}"
-    mode: "0644"
-    content: |
-      export PYENV_ROOT="$HOME/.pyenv"
-      if [ -d "$PYENV_ROOT/bin" ]; then
-        export PATH="$PYENV_ROOT/bin:$PATH"
-        eval "$(pyenv init -)"
-      fi
-
-- name: Remover bloco legado do Pyenv no Bash
+- name: Remover bloco legado do Pyenv do Bash
   become_user: "{{ dev_user }}"
   blockinfile:
     path: "{{ dev_home }}/.bashrc"
     marker: "# {mark} ANSIBLE MANAGED BLOCK - pyenv"
     state: absent
+
+- name: Instalar Python gerenciado por uv
+  become_user: "{{ dev_user }}"
+  command: "{{ dev_home }}/.local/bin/uv python install {{ python_version }}"
+
+- name: Definir executavel Python gerenciado por uv
+  set_fact:
+    uv_python_executable: "{{ dev_home }}/.local/bin/python{{ python_version.split('.')[0] }}.{{ python_version.split('.')[1] }}"
+
+- name: Validar Python gerenciado por uv
+  command: "{{ uv_python_executable }} --version"
+  register: uv_python_check
+  changed_when: false
+  failed_when: uv_python_check.rc != 0
 
 - name: Instalar ferramentas Python de desenvolvimento via uv
   become_user: "{{ dev_user }}"
@@ -273,7 +255,24 @@
   changed_when: false
   failed_when: false
 
+- name: Habilitar Linux desktop no Flutter
+  become_user: "{{ dev_user }}"
+  command: "{{ flutter_install_dir }}/bin/flutter config --enable-linux-desktop"
+  changed_when: false
+
+- name: Executar flutter doctor
+  become_user: "{{ dev_user }}"
+  command: "{{ flutter_install_dir }}/bin/flutter doctor -v"
+  register: flutter_doctor
+  changed_when: false
+  failed_when: false
+
 - name: Falhar se Flutter nao validar
   fail:
     msg: "Falha ao validar Flutter. Verifique acesso ao storage do Flutter, rede/proxy ou fixe flutter_version."
   when: flutter_check.rc != 0
+
+- name: Falhar se Linux toolchain do Flutter nao estiver pronta
+  fail:
+    msg: "Flutter instalado, mas a Linux toolchain nao ficou pronta. Revise dependencias do desktop Linux e a saida de 'flutter doctor -v'."
+  when: "'Linux toolchain' not in (flutter_doctor.stdout | default(''))"

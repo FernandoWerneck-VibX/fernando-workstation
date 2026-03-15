@@ -31,8 +31,8 @@ A proposta principal é simples:
 - **Ambiente de Desenvolvimento Completo**
   - Java (SDKMAN, Maven, Gradle)
   - Node (NVM, Yarn, PNPM, Vue CLI, Vite)
-  - Python (Pyenv)
-  - `uv` para toolchain Python e ferramentas de projeto
+  - Python gerenciado por `uv`
+  - `uv` para toolchain Python, versões e ferramentas de projeto
   - `pre-commit`, `yamllint` e `ansible-lint`
   - Flutter SDK
 
@@ -60,7 +60,7 @@ A proposta principal é simples:
   - Chrome
   - Firefox
   - Visual Studio Code
-  - IntelliJ IDEA Ultimate
+  - IntelliJ IDEA Ultimate (instalação oficial JetBrains)
   - Sublime Text
   - Obsidian
   - Postman
@@ -306,7 +306,7 @@ projects_repos:
     url: git@github.com:FernandoWerneck/market-analysis-data.git
 
 flatpak_apps:
-  - id: "com.jetbrains.IntelliJ-IDEA-Ultimate"
+  - id: "intellij-idea-ultimate"
   - id: "md.obsidian.Obsidian"
   - id: "com.getpostman.Postman"
   - id: "org.ferdium.Ferdium"

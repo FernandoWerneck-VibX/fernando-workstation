@@ -1,7 +1,14 @@
 ---
 python_version: "3.12.2"
 node_version: "lts/*"
+nvm_version: "v0.40.3"
 java_version: "24-open"
 flutter_version: "latest"
 flutter_channel: "stable"
 flutter_install_dir: "/opt/flutter"
+flutter_linux_packages:
+  - clang
+  - cmake
+  - ninja-build
+  - pkg-config
+  - libgtk-3-dev

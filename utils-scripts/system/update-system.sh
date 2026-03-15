@@ -10,4 +10,6 @@ if [ -s "$HOME/.nvm/nvm.sh" ]; then
   source "$NVM_DIR/nvm.sh"
   nvm install --lts --reinstall-packages-from=current
 fi
-command -v pyenv >/dev/null && pyenv update || true
+if command -v uv >/dev/null; then
+  uv tool upgrade --all || true
+fi

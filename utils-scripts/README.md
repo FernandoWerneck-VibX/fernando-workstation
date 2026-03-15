@@ -56,7 +56,7 @@ Scripts para manutenção geral.
 Remove caches e arquivos temporários.
 
 ### update-system.sh
-Atualiza apt, Flatpak, SDKMAN, NVM e Pyenv.
+Atualiza apt, Flatpak, SDKMAN, NVM e ferramentas instaladas via uv.
 
 ### boost.sh
 Ativa modo performance.
