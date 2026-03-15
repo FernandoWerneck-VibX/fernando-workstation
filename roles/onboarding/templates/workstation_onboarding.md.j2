@@ -21,7 +21,7 @@ Arquivo gerado automaticamente pelo Ansible em {{ ansible_date_time.iso8601 }}.
 
 ## Apps Desktop Provisionados
 
-{% for app in flatpak_apps %}
+{% for app in (desktop_apps_resolved | default(desktop_apps_catalog)) %}
 - `{{ app.id }}`
 {% endfor %}
 - `kazam` (apt)

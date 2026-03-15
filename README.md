@@ -305,7 +305,7 @@ projects_repos:
     path: personal/market-analysis-data
     url: git@github.com:FernandoWerneck/market-analysis-data.git
 
-flatpak_apps:
+desktop_apps_catalog:
   - id: "intellij-idea-ultimate"
   - id: "md.obsidian.Obsidian"
   - id: "com.getpostman.Postman"
@@ -350,7 +350,7 @@ Opcional: para Postman via `.deb`, configure `postman_deb_url` e `postman_deb_pa
 Exemplo de fallback por app:
 
 ```yaml
-flatpak_apps:
+desktop_apps_catalog:
   - id: "com.getpostman.Postman"
     fallback:
       tarball: "https://dl.pstmn.io/download/latest/linux64"

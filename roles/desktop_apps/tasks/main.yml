@@ -18,7 +18,11 @@
 
 - name: Verificar se IntelliJ IDEA Ultimate oficial sera instalada
   set_fact:
-    desktop_apps_install_intellij_official: "{{ (flatpak_apps | selectattr('id', 'equalto', 'intellij-idea-ultimate') | list | length) > 0 }}"
+    desktop_apps_install_intellij_official: "{{ (desktop_apps_catalog | selectattr('id', 'equalto', 'intellij-idea-ultimate') | list | length) > 0 }}"
+
+- name: Inicializar catalogo resolvido de apps desktop sem IntelliJ dinamico
+  set_fact:
+    desktop_apps_resolved: "{{ desktop_apps_catalog | rejectattr('id', 'equalto', 'intellij-idea-ultimate') | list }}"
 
 - name: Consultar release oficial mais recente do IntelliJ IDEA Ultimate
   uri:
@@ -37,27 +41,45 @@
     - desktop_apps_install_intellij_official
     - intellij_release_latest.status is not defined or intellij_release_latest.status != 200
 
-- name: Definir download oficial do IntelliJ IDEA Ultimate
+- name: Montar app resolvido do IntelliJ IDEA Ultimate
   set_fact:
-    intellij_ultimate_release: "{{ intellij_release_latest.json.IIU[0] }}"
-    intellij_ultimate_tarball_url: >-
+    desktop_apps_intellij_resolved: >-
       {{
-        intellij_release_latest.json.IIU[0].downloads.linux.link
-        if ansible_architecture == 'x86_64'
-        else intellij_release_latest.json.IIU[0].downloads.linuxARM64.link
+        desktop_apps_intellij_base
+        | combine(
+            {
+              'fallback': (
+                desktop_apps_intellij_base.fallback
+                | combine(
+                    {
+                      'tarball': (
+                        intellij_release_latest.json.IIU[0].downloads.linux.link
+                        if ansible_architecture == 'x86_64'
+                        else intellij_release_latest.json.IIU[0].downloads.linuxARM64.link
+                      ),
+                      'tarball_checksum_url': (
+                        intellij_release_latest.json.IIU[0].downloads.linux.checksumLink
+                        if ansible_architecture == 'x86_64'
+                        else intellij_release_latest.json.IIU[0].downloads.linuxARM64.checksumLink
+                      ),
+                      'desired_version': intellij_release_latest.json.IIU[0].version
+                    }
+                  )
+              )
+            },
+            recursive=True
+          )
       }}
-    intellij_ultimate_checksum_url: >-
-      {{
-        intellij_release_latest.json.IIU[0].downloads.linux.checksumLink
-        if ansible_architecture == 'x86_64'
-        else intellij_release_latest.json.IIU[0].downloads.linuxARM64.checksumLink
-      }}
-    intellij_ultimate_version: "{{ intellij_release_latest.json.IIU[0].version }}"
+  when: desktop_apps_install_intellij_official
+
+- name: Adicionar IntelliJ IDEA Ultimate resolvido ao catalogo final
+  set_fact:
+    desktop_apps_resolved: "{{ desktop_apps_resolved + [desktop_apps_intellij_resolved] }}"
   when: desktop_apps_install_intellij_official
 
 - name: Instalar apps desktop via Flatpak com fallback
   include_tasks: install_single_app.yml
-  loop: "{{ flatpak_apps }}"
+  loop: "{{ desktop_apps_resolved }}"
   loop_control:
     loop_var: desktop_app
     label: "{{ desktop_app.id }}"
@@ -82,7 +104,7 @@
   register: app_validation
   changed_when: false
   failed_when: false
-  loop: "{{ flatpak_apps }}"
+  loop: "{{ desktop_apps_resolved }}"
   loop_control:
     label: "{{ item.id }}"
 
