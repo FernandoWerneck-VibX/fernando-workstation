@@ -383,6 +383,7 @@
     group: "{{ dev_user }}"
     mode: "0644"
     content: |
+      {% raw %}
       __fzf_history() {
         local selected
         selected="$(
@@ -397,6 +398,7 @@
       }
 
       bind -x '"\C-r": __fzf_history'
+      {% endraw %}
 
 - name: Remover bloco legado do FZF History do Bash
   become_user: "{{ dev_user }}"
