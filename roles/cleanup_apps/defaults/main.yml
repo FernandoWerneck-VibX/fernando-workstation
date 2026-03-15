@@ -14,6 +14,7 @@ cleanup_apps_packages:
   - gnome-weather
   - gnome-clocks
   - gnome-contacts
+  - gnome-online-accounts
   - gnome-characters
   - gnome-mahjongg
   - gnome-mines

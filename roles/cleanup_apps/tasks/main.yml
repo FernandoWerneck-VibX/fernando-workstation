@@ -5,3 +5,16 @@
     purge: yes
     autoremove: yes
     state: absent
+
+- name: Executar limpeza final do apt
+  apt:
+    autoremove: yes
+    autoclean: yes
+
+- name: Remover runtimes Flatpak nao utilizados
+  command: flatpak uninstall -y --unused --system
+  register: cleanup_flatpak_unused
+  changed_when: >-
+    cleanup_flatpak_unused.rc == 0 and
+    'Nothing unused to uninstall' not in (cleanup_flatpak_unused.stdout | default('')) and
+    'Nada para desinstalar' not in (cleanup_flatpak_unused.stdout | default(''))
