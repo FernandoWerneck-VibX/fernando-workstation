@@ -19,7 +19,7 @@ desktop_apps_catalog:
     flatpak_preferred: false
     fallback:
       apt_key_url: "https://packages.microsoft.com/keys/microsoft.asc"
-      apt_key_dest: "/usr/share/keyrings/microsoft.gpg"
+      apt_key_dest: "/usr/share/keyrings/microsoft.asc"
       apt_source_dest: "/etc/apt/sources.list.d/vscode.sources"
       apt_source_legacy_paths:
         - "/etc/apt/sources.list.d/fallback-com-visualstudio-code.list"
@@ -30,7 +30,7 @@ desktop_apps_catalog:
         Suites: stable
         Components: main
         Architectures: amd64,arm64,armhf
-        Signed-By: /usr/share/keyrings/microsoft.gpg
+        Signed-By: /usr/share/keyrings/microsoft.asc
       apt_package: "code"
   - id: "intellij-idea-ultimate"
   - id: "com.sublimetext.three"
