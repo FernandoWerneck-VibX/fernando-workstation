@@ -33,6 +33,7 @@ Objetivo: pegar uma maquina nova e sair com sistema, shell, ferramentas de desen
 - `atuin`
 - `gcalendar` no perfil pessoal com fallback para `uv tool install`
 - `pay-respects`
+- OpenClaw como assistente pessoal local (`gateway` + dashboard + workspace dedicado)
 - completions e integracoes do Git
 - aliases via `chezmoi/dot_bash_aliases`
 
@@ -82,6 +83,7 @@ Observacoes:
 
 - Syncthing
 - Google Drive via `rclone`
+- OpenClaw como assistente pessoal local
 - Google Calendar desklet no perfil pessoal
 - Cinnamon Dynamic Wallpaper no perfil pessoal
 - aplicacao de dotfiles via `chezmoi`
@@ -91,7 +93,7 @@ Observacoes:
 
 Perfis disponiveis:
 
-- [profiles/personal.yml](/home/fernando/projects/vib/personal-workstation/profiles/personal.yml): mantem Syncthing, Google Drive e clonagem de projetos ativos
+- [profiles/personal.yml](/home/fernando/projects/vib/personal-workstation/profiles/personal.yml): mantem Syncthing, Google Drive, OpenClaw e clonagem de projetos ativos
 - [profiles/collaborator.yml](/home/fernando/projects/vib/personal-workstation/profiles/collaborator.yml): desativa recursos pessoais
 
 ## Como executar
@@ -181,6 +183,31 @@ O playbook habilita o servico e prepara as pastas, mas o pareamento entre maquin
 
 Depois do primeiro provisionamento, faca logout/login para aplicar o grupo `docker` ao usuario.
 
+### OpenClaw
+
+Valido apenas quando `openclaw_enable: true`.
+
+O playbook prepara:
+
+- instalacao do `openclaw` via `npm` no ambiente Node gerenciado por NVM
+- launcher em `~/.local/bin/openclaw`
+- workspace dedicado em `~/.openclaw/workspace`
+- configuracao local segura em `~/.openclaw/openclaw.json`
+- servico systemd `openclaw-gateway`
+
+Depois do provisionamento:
+
+```bash
+systemctl status openclaw-gateway --no-pager
+openclaw dashboard
+```
+
+Na primeira abertura do dashboard:
+
+- autenticar o provedor/modelo desejado com `openclaw onboard` ou `openclaw configure`
+- revisar o workspace em `~/.openclaw/workspace`
+- opcionalmente conectar canais externos apenas se voce realmente quiser um assistente sempre acessivel fora da UI local
+
 ## Dotfiles
 
 O role de shell instala `chezmoi` e pode aplicar dotfiles de duas formas:
@@ -195,9 +222,11 @@ No estado atual, o conteudo versionado em `chezmoi/` e aplicado automaticamente 
 Pontos mais comuns de personalizacao:
 
 - versoes de linguagens em [group_vars/all.yml](/home/fernando/projects/vib/personal-workstation/group_vars/all.yml)
+- habilitacao do OpenClaw em [group_vars/all.yml](/home/fernando/projects/vib/personal-workstation/group_vars/all.yml) e [roles/openclaw/defaults/main.yml](/home/fernando/projects/vib/personal-workstation/roles/openclaw/defaults/main.yml)
 - apps desktop em [roles/desktop_apps/defaults/main.yml](/home/fernando/projects/vib/personal-workstation/roles/desktop_apps/defaults/main.yml)
 - apps removidos ao final em [roles/cleanup_apps/defaults/main.yml](/home/fernando/projects/vib/personal-workstation/roles/cleanup_apps/defaults/main.yml)
 - configuracao de shell em [roles/shell/tasks/main.yml](/home/fernando/projects/vib/personal-workstation/roles/shell/tasks/main.yml) e [roles/shell_env/tasks/main.yml](/home/fernando/projects/vib/personal-workstation/roles/shell_env/tasks/main.yml)
+- baseline do assistente em [roles/openclaw/templates/AGENTS.md.j2](/home/fernando/projects/vib/personal-workstation/roles/openclaw/templates/AGENTS.md.j2) e [roles/openclaw/templates/openclaw.json.j2](/home/fernando/projects/vib/personal-workstation/roles/openclaw/templates/openclaw.json.j2)
 - projetos clonados em [group_vars/all.yml](/home/fernando/projects/vib/personal-workstation/group_vars/all.yml)
 
 Exemplo de ajuste de perfil:
@@ -205,6 +234,7 @@ Exemplo de ajuste de perfil:
 ```yaml
 syncthing_enable: false
 gdrive_enable: false
+openclaw_enable: false
 projects_enable: false
 projects_repos: []
 ```
@@ -247,6 +277,14 @@ docker version
 docker compose version
 ```
 
+### Verificar OpenClaw
+
+```bash
+systemctl status openclaw-gateway --no-pager
+openclaw --version
+openclaw dashboard
+```
+
 ### Verificar apps desktop
 
 ```bash
@@ -279,6 +317,7 @@ ansible-playbook -i inventory.ini site.yml --ask-become-pass -vv 2>&1 | tee ansi
 - `roles/shell_env` e `roles/shell`: shell, prompt e integracoes
 - `roles/dev_tools`: linguagens e tooling de desenvolvimento
 - `roles/devops`: Docker e ferramentas de infraestrutura
+- `roles/openclaw`: assistente pessoal local com gateway, workspace e servico
 - `roles/desktop_apps`: catalogo de apps e fallbacks
 - `roles/projects`: clonagem de repositorios
 - `roles/syncthing`: sincronizacao entre maquinas

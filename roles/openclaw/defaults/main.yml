@@ -1,0 +1,13 @@
+---
+openclaw_enable: true
+openclaw_version: "latest"
+openclaw_config_dir: "{{ dev_home }}/.openclaw"
+openclaw_workspace_dir: "{{ openclaw_config_dir }}/workspace"
+openclaw_gateway_token_file: "{{ openclaw_config_dir }}/.gateway-token"
+openclaw_gateway_port: 18789
+openclaw_gateway_bind: "loopback"
+openclaw_service_name: "openclaw-gateway"
+openclaw_service_unit_path: "/etc/systemd/system/{{ openclaw_service_name }}.service"
+openclaw_wrapper_path: "{{ dev_home }}/.local/bin/openclaw"
+openclaw_launcher_path: "{{ dev_home }}/.local/bin/openclaw-launch"
+openclaw_projects_hint_path: "{{ projects_dir }}"

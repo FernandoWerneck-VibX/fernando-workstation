@@ -9,6 +9,8 @@
     - shell
     - dev_tools
     - devops
+    - role: openclaw
+      when: openclaw_enable | default(true) | bool
     - desktop_apps
     - role: projects
       when: projects_enable | default(true) | bool

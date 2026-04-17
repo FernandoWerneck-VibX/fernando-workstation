@@ -16,6 +16,7 @@ flutter_install_dir: "/opt/flutter"
 syncthing_enable: true
 gdrive_enable: true
 projects_enable: true
+openclaw_enable: true
 syncthing_folders:
   - "{{ dev_home }}/Downloads"
 cinnamon_enable_gtile: true

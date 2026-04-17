@@ -18,6 +18,7 @@ Arquivo gerado automaticamente pelo Ansible em {{ ansible_date_time.iso8601 }}.
 - Clonagem automatica de projetos: `{% if projects_enable | default(true) | bool %}habilitada{% else %}desabilitada{% endif %}`
 - Syncthing: `{% if syncthing_enable | default(true) | bool %}habilitado{% else %}desabilitado{% endif %}`
 - Google Drive (rclone): `{% if gdrive_enable | default(true) | bool %}habilitado{% else %}desabilitado{% endif %}`
+- OpenClaw: `{% if openclaw_enable | default(true) | bool %}habilitado{% else %}desabilitado{% endif %}`
 
 ## Apps Desktop Provisionados
 
@@ -38,6 +39,10 @@ Arquivo gerado automaticamente pelo Ansible em {{ ansible_date_time.iso8601 }}.
 {% if gdrive_enable | default(true) | bool %}
 - Google Drive via rclone (bind para `~/docs`)
 - Pasta de backup de chaves em `~/GoogleDrive/ssh`
+{% endif %}
+{% if openclaw_enable | default(true) | bool %}
+- OpenClaw (`openclaw-gateway`)
+- Workspace do assistente em `~/.openclaw/workspace`
 {% endif %}
 
 ## Repositorios de Projeto (clone automatico)
@@ -71,6 +76,13 @@ Arquivo gerado automaticamente pelo Ansible em {{ ansible_date_time.iso8601 }}.
    - Abrir `http://127.0.0.1:8384`
    - Adicionar Device IDs e compartilhar pastas
 {% endif %}
+{% if openclaw_enable | default(true) | bool %}
+- Finalizar setup do OpenClaw:
+   - `systemctl status openclaw-gateway --no-pager`
+   - `openclaw dashboard`
+   - `openclaw onboard` ou `openclaw configure` para autenticar o modelo
+   - Revisar os arquivos de contexto em `~/.openclaw/workspace`
+{% endif %}
 - Validar Docker para usuario sem sudo:
    - Fazer logout/login apos provisionamento
 - Configurar contas nos apps:
@@ -86,6 +98,10 @@ systemctl status syncthing@{{ dev_user }} --no-pager
 {% endif %}
 {% if gdrive_enable | default(true) | bool %}
 systemctl status rclone-gdrive --no-pager
+{% endif %}
+{% if openclaw_enable | default(true) | bool %}
+systemctl status openclaw-gateway --no-pager
+openclaw --version
 {% endif %}
 docker version
 docker compose version

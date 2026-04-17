@@ -1,0 +1,30 @@
+// Baseline provisionada pelo Ansible para uso pessoal local.
+{
+  gateway: {
+    mode: "local",
+    bind: "{{ openclaw_gateway_bind }}",
+    port: {{ openclaw_gateway_port }},
+    auth: {
+      mode: "token",
+      token: "{{ openclaw_token_slurp.content | b64decode | trim }}",
+    },
+  },
+
+  agents: {
+    defaults: {
+      workspace: "{{ openclaw_workspace_dir }}",
+      skipBootstrap: true,
+    },
+  },
+
+  tools: {
+    fs: {
+      workspaceOnly: true,
+    },
+    exec: {
+      applyPatch: {
+        workspaceOnly: true,
+      },
+    },
+  },
+}

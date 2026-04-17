@@ -1,0 +1,179 @@
+---
+- name: Garantir diretórios do OpenClaw
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(dev_user) }}"
+    group: "{{ item.group | default(dev_user) }}"
+    mode: "{{ item.mode | default('0755') }}"
+  loop:
+    - path: "{{ openclaw_config_dir }}"
+      mode: "0700"
+    - path: "{{ openclaw_workspace_dir }}"
+      mode: "0700"
+    - path: "{{ dev_home }}/.local/bin"
+      mode: "0755"
+
+- name: Verificar instalacao atual do OpenClaw no NVM
+  become_user: "{{ dev_user }}"
+  shell: |
+    set -euo pipefail
+    export NVM_DIR="{{ dev_home }}/.nvm"
+    . "$NVM_DIR/nvm.sh"
+    openclaw --version
+  args:
+    executable: /bin/bash
+  register: openclaw_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Definir necessidade de instalar OpenClaw
+  set_fact:
+    openclaw_install_needed: >-
+      {{
+        openclaw_current_version.rc != 0
+        or
+        (
+          openclaw_version != 'latest'
+          and openclaw_version not in (openclaw_current_version.stdout | default(''))
+        )
+      }}
+
+- name: Instalar OpenClaw via npm global do NVM
+  become_user: "{{ dev_user }}"
+  shell: |
+    set -euo pipefail
+    export NVM_DIR="{{ dev_home }}/.nvm"
+    . "$NVM_DIR/nvm.sh"
+    npm install -g openclaw@{{ openclaw_version }}
+  args:
+    executable: /bin/bash
+  when: openclaw_install_needed
+
+- name: Instalar launcher do OpenClaw
+  copy:
+    dest: "{{ openclaw_launcher_path }}"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+
+      if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+        echo "nvm.sh nao encontrado em $NVM_DIR" >&2
+        exit 1
+      fi
+
+      # Carrega o Node provisionado pelo role dev_tools antes de localizar o binario real.
+      . "$NVM_DIR/nvm.sh"
+
+      current_node="$(nvm which current 2>/dev/null || true)"
+      if [ -z "$current_node" ] || [ ! -x "$current_node" ]; then
+        echo "Nao foi possivel localizar a versao atual do Node via NVM." >&2
+        exit 1
+      fi
+
+      openclaw_bin="$(dirname "$current_node")/openclaw"
+      if [ ! -x "$openclaw_bin" ]; then
+        echo "Binario do OpenClaw nao encontrado em $openclaw_bin" >&2
+        exit 1
+      fi
+
+      exec "$openclaw_bin" "$@"
+  notify: Reiniciar OpenClaw
+
+- name: Instalar wrapper do OpenClaw no PATH local
+  copy:
+    dest: "{{ openclaw_wrapper_path }}"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      exec "$HOME/.local/bin/openclaw-launch" "$@"
+  notify: Reiniciar OpenClaw
+
+- name: Verificar token do gateway do OpenClaw
+  stat:
+    path: "{{ openclaw_gateway_token_file }}"
+  register: openclaw_token_stat
+
+- name: Gerar token do gateway do OpenClaw
+  become_user: "{{ dev_user }}"
+  shell: |
+    set -euo pipefail
+    umask 077
+    /usr/bin/python3 - <<'PY' > "{{ openclaw_gateway_token_file }}"
+    import secrets
+    print(secrets.token_urlsafe(32))
+    PY
+  args:
+    executable: /bin/bash
+  when: not openclaw_token_stat.stat.exists
+
+- name: Ler token do gateway do OpenClaw
+  slurp:
+    src: "{{ openclaw_gateway_token_file }}"
+  register: openclaw_token_slurp
+
+- name: Instalar configuracao segura do OpenClaw
+  template:
+    src: openclaw.json.j2
+    dest: "{{ openclaw_config_dir }}/openclaw.json"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0600"
+  notify: Reiniciar OpenClaw
+
+- name: Semear workspace do OpenClaw
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ openclaw_workspace_dir }}/{{ item.dest }}"
+    owner: "{{ dev_user }}"
+    group: "{{ dev_user }}"
+    mode: "0644"
+    force: false
+  loop:
+    - src: AGENTS.md.j2
+      dest: AGENTS.md
+    - src: IDENTITY.md.j2
+      dest: IDENTITY.md
+    - src: SOUL.md.j2
+      dest: SOUL.md
+    - src: TOOLS.md.j2
+      dest: TOOLS.md
+    - src: USER.md.j2
+      dest: USER.md
+
+- name: Instalar servico systemd do OpenClaw
+  template:
+    src: openclaw-gateway.service.j2
+    dest: "{{ openclaw_service_unit_path }}"
+    mode: "0644"
+  notify: Reiniciar OpenClaw
+
+- name: Recarregar systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Habilitar e iniciar servico do OpenClaw
+  systemd:
+    name: "{{ openclaw_service_name }}"
+    enabled: yes
+    state: started
+
+- name: Validar binario do OpenClaw
+  become_user: "{{ dev_user }}"
+  command: "{{ openclaw_wrapper_path }} --version"
+  changed_when: false
+
+- name: Avisar proximo passo do OpenClaw
+  debug:
+    msg: >-
+      OpenClaw instalado e servico {{ openclaw_service_name }} iniciado na porta
+      {{ openclaw_gateway_port }}. Rode '{{ openclaw_wrapper_path }} dashboard'
+      para abrir a UI local e finalize a autenticacao do modelo.
