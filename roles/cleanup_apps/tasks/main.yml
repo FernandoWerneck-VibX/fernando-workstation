@@ -6,6 +6,15 @@
     autoremove: yes
     state: absent
 
+- name: Remover apps Flatpak desnecessarios na etapa final
+  command: flatpak uninstall -y --system {{ item }}
+  register: cleanup_flatpak_removed
+  changed_when: cleanup_flatpak_removed.rc == 0
+  failed_when: false
+  loop: "{{ cleanup_apps_flatpaks }}"
+  loop_control:
+    label: "{{ item }}"
+
 - name: Executar limpeza final do apt
   apt:
     autoremove: yes

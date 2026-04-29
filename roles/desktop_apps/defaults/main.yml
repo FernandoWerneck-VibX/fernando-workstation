@@ -3,6 +3,14 @@ flatpak_remote_name: "flathub"
 flatpak_remote_url: "https://flathub.org/repo/flathub.flatpakrepo"
 postman_deb_url: ""
 postman_deb_package_name: ""
+desktop_apps_vscode_markdown_desktop: "code.desktop"
+desktop_apps_markdown_mime_types:
+  - "text/markdown"
+  - "text/x-markdown"
+  - "application/x-markdown"
+desktop_apps_chrome_pdf_desktop: "google-chrome.desktop"
+desktop_apps_pdf_mime_types:
+  - "application/pdf"
 desktop_apps_catalog:
   - id: "com.google.Chrome"
     fallback:
@@ -41,10 +49,6 @@ desktop_apps_catalog:
       apt_key_dest: "/etc/apt/keyrings/sublimehq.gpg"
       apt_repo: "deb [signed-by=/etc/apt/keyrings/sublimehq.gpg] https://download.sublimetext.com/ apt/stable/"
       apt_package: "sublime-text"
-  - id: "md.obsidian.Obsidian"
-    fallback:
-      deb: "https://github.com/obsidianmd/obsidian-releases/releases/latest/download/obsidian_amd64.deb"
-      package_name: "obsidian"
   - id: "com.getpostman.Postman"
     fallback:
       deb: "{{ postman_deb_url }}"

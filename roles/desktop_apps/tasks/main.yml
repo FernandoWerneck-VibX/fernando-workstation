@@ -120,3 +120,39 @@
   loop: "{{ app_validation.results }}"
   loop_control:
     label: "{{ item.item.id }}"
+
+- name: Verificar app padrao atual para Markdown
+  become_user: "{{ dev_user }}"
+  command: xdg-mime query default {{ item }}
+  register: markdown_mime_defaults
+  changed_when: false
+  failed_when: false
+  loop: "{{ desktop_apps_markdown_mime_types }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Configurar VS Code como app padrao para Markdown
+  become_user: "{{ dev_user }}"
+  command: xdg-mime default {{ desktop_apps_vscode_markdown_desktop }} {{ item.item }}
+  when: (item.stdout | default('') | trim) != desktop_apps_vscode_markdown_desktop
+  loop: "{{ markdown_mime_defaults.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Verificar app padrao atual para PDF
+  become_user: "{{ dev_user }}"
+  command: xdg-mime query default {{ item }}
+  register: pdf_mime_defaults
+  changed_when: false
+  failed_when: false
+  loop: "{{ desktop_apps_pdf_mime_types }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Configurar Chrome como app padrao para PDF
+  become_user: "{{ dev_user }}"
+  command: xdg-mime default {{ desktop_apps_chrome_pdf_desktop }} {{ item.item }}
+  when: (item.stdout | default('') | trim) != desktop_apps_chrome_pdf_desktop
+  loop: "{{ pdf_mime_defaults.results }}"
+  loop_control:
+    label: "{{ item.item }}"

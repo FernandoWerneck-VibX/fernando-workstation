@@ -67,7 +67,6 @@ Catalogo atual em [roles/desktop_apps/defaults/main.yml](/home/fernando/projects
 - VS Code
 - IntelliJ IDEA Ultimate
 - Sublime Text
-- Obsidian
 - Postman
 - Discord
 - Spotify

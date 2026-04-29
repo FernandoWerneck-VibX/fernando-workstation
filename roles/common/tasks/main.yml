@@ -71,6 +71,7 @@
       - jq
       - gawk
       - libglib2.0-bin
+      - xdg-utils
       - bash-completion
       - file
       - software-properties-common
