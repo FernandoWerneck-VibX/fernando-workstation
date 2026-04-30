@@ -335,9 +335,10 @@ Observacao:
 cat ~/WORKSTATION_ONBOARDING.md
 ```
 
-### Verificar Docker
+### Verificar GitHub CLI e Docker
 
 ```bash
+gh --version
 docker version
 docker compose version
 ```

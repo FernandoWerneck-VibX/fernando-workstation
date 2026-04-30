@@ -47,12 +47,26 @@
     dest: /etc/apt/keyrings/docker.asc
     mode: "0644"
 
+- name: Baixar keyring do GitHub CLI
+  get_url:
+    url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+    dest: /etc/apt/keyrings/githubcli-archive-keyring.gpg
+    mode: "0644"
+
 - name: Adicionar repo Docker
   apt_repository:
     repo: >-
       deb [arch={{ devops_arch }} signed-by=/etc/apt/keyrings/docker.asc]
       https://download.docker.com/linux/ubuntu {{ docker_repo_release }} stable
     filename: docker
+    update_cache: yes
+
+- name: Adicionar repo GitHub CLI
+  apt_repository:
+    repo: >-
+      deb [arch={{ devops_arch }} signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg]
+      https://cli.github.com/packages stable main
+    filename: github-cli
     update_cache: yes
 
 - name: Instalar Docker e Compose
@@ -63,6 +77,17 @@
       - containerd.io
       - docker-buildx-plugin
       - docker-compose-plugin
+    state: present
+
+- name: Atualizar Docker CLI # noqa package-latest
+  apt:
+    name: docker-ce-cli
+    state: latest
+    only_upgrade: yes
+
+- name: Instalar GitHub CLI
+  apt:
+    name: gh
     state: present
 
 - name: Habilitar Docker
@@ -429,6 +454,17 @@
   fail:
     msg: "Falha ao validar Helm. Verifique acesso a get.helm.sh, rede/proxy ou fixe helm_version."
   when: helm_check.rc != 0
+
+- name: Validar GitHub CLI
+  command: gh --version
+  register: gh_check
+  changed_when: false
+  failed_when: false
+
+- name: Falhar se GitHub CLI nao validar
+  fail:
+    msg: "Falha ao validar GitHub CLI. Verifique acesso ao repo do GitHub CLI, rede/proxy ou apt."
+  when: gh_check.rc != 0
 
 - name: Validar k9s
   command: k9s version
